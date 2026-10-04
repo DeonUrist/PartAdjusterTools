@@ -1,0 +1,9 @@
+bin/
+obj/
+.venv/
+research/
+tools/
+release/
+ExecPlan.md
+verification/bin/
+verification/obj/

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GameDir Condition="'$(GameDir)' == ''">$(APOCALYPTER_GAME_DIR)</GameDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../AdjustmentMath.cs" Link="AdjustmentMath.cs" />
+    <Compile Include="../SaveVariables.cs" Link="SaveVariables.cs" />
+    <Reference Include="PlayMaker"><HintPath>$(GameDir)/Apocalypter_Data/Managed/PlayMaker.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameDir)/Apocalypter_Data/Managed/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameDir)/Apocalypter_Data/Managed/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(GameDir)/Apocalypter_Data/Managed/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="CheckGameDir" BeforeTargets="ResolveReferences" Condition="'$(GameDir)' == ''">
+    <Error Text="Pass -p:GameDir=path-to-installed-Apocalypter or set APOCALYPTER_GAME_DIR." />
+  </Target>
+</Project>
