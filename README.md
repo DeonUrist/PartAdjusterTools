@@ -18,6 +18,8 @@ Version 1.0.1 adds a horizontal cylinder connecting the upper suspension rods on
 
 Version 1.0.2 fixes bars disappearing in third-person driving: they now use their axle's rendering layer. The driving camera excludes layer 2, which the original brace implementation used. Their colliders remain disabled/removed, keeping part selection unchanged.
 
+Version 1.0.3 keeps the game's native adjustment cursor visible while hovering over or adjusting suspension, even if another interaction changes the cursor. The normal cursor resumes when you leave the suspension. It also includes a transparent axle-and-wrench icon for the Apocasetter mod list.
+
 Width changes stretch the suspension model on its local X axis and move the wheel controllers apart around each axle's original midpoint. Wheel scale, tyre radius and tyre width stay unchanged. Height changes move the model, lift-kit attachment hinge and physical wheel mounts together. NWH uses those mount transforms for suspension raycasts, force application, wheel visuals and wheel colliders on the next physics tick. Factory spring and damper settings continue to come from the game's stock/lifted suspension states. Installing or removing a lift kit preserves the custom width and height offsets.
 
 The plugin discovers vehicles with `suspension_model`, `hinge_suspension_parent/hinge_suspension` and at least four direct `hinge_wheel_*` NWH mounts. This hierarchy was inspected in the installed Poloska, Rustcargo and Rustchief prefabs. Width and height apply to both axles together. Two-wheel trailers without that assembly are excluded.
@@ -26,9 +28,11 @@ Each car's adjustments are included in the game's existing `saveItemVar` save da
 
 ## Installation and settings
 
-Download `PartAdjusterTools-1.0.2.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL separately for manual installation.
+Download `PartAdjusterTools-1.0.3.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
 
 Restart the game after installing. BepInEx creates `BepInEx/config/com.denis.apocalypter.partadjustment.cfg` on first load. Apocasetter discovers the plugin through its normal `Apocasetter = true` opt-in; no other mod is required.
+
+Keep `icon.png` beside `PartAdjustment.dll` in the mod's own folder; Apocasetter automatically discovers it there, with no extra registration. For a DLL installed directly in `BepInEx/plugins`, rename the PNG to `PartAdjustment.png` beside that DLL. The icon is copied to `bin/Release` when building. Restart after adding it because Apocasetter caches icons for the session.
 
 Defaults: width step 0.025, height step 0.025 metres and height limit ±0.5 metres. Settings can be changed through Apocasetter or the config file. Turning Enabled off stops selection/input and preserves existing vehicle adjustments. Input is ignored while paused, unfocused or with the cursor unlocked.
 
@@ -51,7 +55,7 @@ All eight brace endpoint definitions were compared against original mesh rod-cap
 
 The game has not been executed for this task. Managed checks do not verify rendering, target selection, driving physics, full save-file reloads or runtime coexistence with other mods. In-game checks still needed:
 
-1. Select stock and lifted suspension on a supported car; verify the single hint and 4/6/2/8/0 behavior.
+1. Select stock and lifted suspension on a supported car; verify the native adjustment cursor, single hint and 4/6/2/8/0 behavior. Aim away and at another adjustable part to check that the cursor returns to normal. Open Apocasetter and check the mod's icon.
 2. Drive after adjusting; check that both axles, their visible wheels and physical contacts move together.
 3. Attach/remove a lift kit and verify that offsets persist and factory suspension behavior remains intact.
 4. Save/load two adjusted cars and switch slots; verify per-car persistence, bounds and reset without accumulating changes.
