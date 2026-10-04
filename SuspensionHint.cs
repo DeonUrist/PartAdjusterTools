@@ -44,7 +44,7 @@ namespace PartAdjustment
                 rect.anchorMax = new Vector2(0f, 1f);
                 rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(700f, Mathf.Max(40f, template.fontSize * 2f));
+                rect.sizeDelta = new Vector2(1000f, Mathf.Max(90f, template.fontSize * 4.5f));
             }
             if (!shown)
             {
@@ -54,7 +54,7 @@ namespace PartAdjustment
             }
             foreach (var graphic in originals.Keys) if (graphic != null) graphic.enabled = false;
             label.gameObject.SetActive(true);
-            label.text = "numpad - adjust wheel spacing";
+            label.text = SuspensionControls.Hint;
         }
     }
 }

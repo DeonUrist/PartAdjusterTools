@@ -6,15 +6,17 @@ Activate the Part Adjustment toolbox as usual, aim at the visible front or rear 
 
 Version 1.0.4 adds the actual floating wrench indicators at the front and rear suspension. They reuse vanilla's wrench mesh, material, size and tool visibility group, face the camera, and follow the active stock/lifted axle as its width/height changes. Aim at either wrench to select the suspension. These indicators remain the same size while the suspension stretches and are recreated on load.
 
-| Numpad key | Suspension adjustment |
-| --- | --- |
-| 4 | Narrow both axles toward their standard width |
-| 6 | Widen both axles, up to 1.5 times their standard width |
-| 2 | Lower the suspension assembly and physical wheel mounts relative to the body |
-| 8 | Raise the suspension assembly and physical wheel mounts relative to the body |
-| 0 | Reset width and height to standard |
+Version 1.0.5 uses the game's existing adjustment bindings, including primary and alternate keys. Rebind them in the game's Controls menu; a numeric keypad is no longer required.
 
-The suspension hint shows only `numpad - adjust wheel spacing`. The standard controls return when you finish or select an engine/exhaust/radiator.
+| Game Controls action | Suspension adjustment |
+| --- | --- |
+| Adjust-move left/rotate left | Narrow both axles toward their standard width |
+| Adjust-move right/rotate right | Widen both axles, up to 1.5 times their standard width |
+| Adjust-move down/rotate backward | Lower the suspension assembly and physical wheel mounts relative to the body |
+| Adjust-move up/rotate forward | Raise the suspension assembly and physical wheel mounts relative to the body |
+| Adjust-reset | Reset width and height to standard |
+
+The suspension hint shows the current keys for spacing, height and reset, including alternate bindings. It updates when bindings change and shows `Unbound` for an action with no assigned keys. The standard controls return when you finish or select an engine/exhaust/radiator. Suspension always uses the movement directions above; it has no rotation mode.
 
 Version 1.0.1 adds a horizontal cylinder connecting the upper suspension rods on each axle. It uses the original suspension's `rusted_black_metal` texture/material, appears when width exceeds 1.0×, stretches with the assembly, and disappears at stock width/reset. Its four-centimetre diameter stays constant. Stock and lifted variants have their own rod-cap placements and follow the game's normal variant visibility. These visual bars are recreated on load and have no collision.
 
@@ -30,7 +32,7 @@ Each car's adjustments are included in the game's existing `saveItemVar` save da
 
 ## Installation and settings
 
-Download `PartAdjusterTools-1.0.4.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
+Download `PartAdjusterTools-1.0.5.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
 
 Restart the game after installing. BepInEx creates `BepInEx/config/com.denis.apocalypter.partadjustment.cfg` on first load. Apocasetter discovers the plugin through its normal `Apocasetter = true` opt-in; no other mod is required.
 
@@ -57,7 +59,7 @@ All eight brace endpoint definitions were compared against original mesh rod-cap
 
 The game has not been executed for this task. Managed checks do not verify rendering, target selection, driving physics, full save-file reloads or runtime coexistence with other mods. In-game checks still needed:
 
-1. Activate/put away the tool and verify that the two floating suspension wrenches appear/hide alongside the original part wrenches. Select stock and lifted suspension via either wrench; verify the native adjustment cursor, single hint and 4/6/2/8/0 behavior, with the markers following the axles. Aim away and at another adjustable part to check that the cursor returns to normal. Open Apocasetter and check the mod's icon.
+1. Activate/put away the tool and verify that the two floating suspension wrenches appear/hide alongside the original part wrenches. Select stock and lifted suspension via either wrench; verify the native adjustment cursor and spacing/height/reset controls, with the markers following the axles. Rebind all five actions to keys outside the numpad and check both primary and alternate bindings, the updated hint, and that previous keys stop adjusting unless still bound. Aim away and at another adjustable part to check that the cursor returns to normal. Open Apocasetter and check the mod's icon.
 2. Drive after adjusting; check that both axles, their visible wheels and physical contacts move together.
 3. Attach/remove a lift kit and verify that offsets persist and factory suspension behavior remains intact.
 4. Save/load two adjusted cars and switch slots; verify per-car persistence, bounds and reset without accumulating changes.

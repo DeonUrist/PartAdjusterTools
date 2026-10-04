@@ -1,7 +1,6 @@
 using System.Linq;
 using HutongGames.PlayMaker;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace PartAdjustment
 {
@@ -46,13 +45,11 @@ namespace PartAdjustment
             bool suspension = Active != null || (hover != null && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag"));
             hint.Show(suspension);
             if (Active == null || Time.timeScale <= 0f || !Application.isFocused || Cursor.lockState != CursorLockMode.Locked) return;
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-            float width = (keyboard.numpad6Key.wasPressedThisFrame ? Plugin.WidthStep.Value : 0f)
-                - (keyboard.numpad4Key.wasPressedThisFrame ? Plugin.WidthStep.Value : 0f);
-            float height = (keyboard.numpad8Key.wasPressedThisFrame ? Plugin.HeightStep.Value : 0f)
-                - (keyboard.numpad2Key.wasPressedThisFrame ? Plugin.HeightStep.Value : 0f);
-            bool reset = keyboard.numpad0Key.wasPressedThisFrame;
+            float width = (SuspensionControls.Pressed(SuspensionControls.Right) ? Plugin.WidthStep.Value : 0f)
+                - (SuspensionControls.Pressed(SuspensionControls.Left) ? Plugin.WidthStep.Value : 0f);
+            float height = (SuspensionControls.Pressed(SuspensionControls.Up) ? Plugin.HeightStep.Value : 0f)
+                - (SuspensionControls.Pressed(SuspensionControls.Down) ? Plugin.HeightStep.Value : 0f);
+            bool reset = SuspensionControls.Pressed(SuspensionControls.Reset);
             if (width != 0f || height != 0f || reset) Active.Change(width, height, reset);
         }
 
