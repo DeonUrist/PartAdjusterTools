@@ -26,6 +26,7 @@ namespace PartAdjustment
         private readonly List<Mount> mounts = new List<Mount>();
         private readonly List<SuspensionPickTarget> picks = new List<SuspensionPickTarget>();
         private SuspensionBraces braces;
+        private SuspensionIndicators indicators;
         private bool ready;
 
         private sealed class Mount
@@ -80,6 +81,7 @@ namespace PartAdjustment
                 picks.Add(target);
             }
             braces = new SuspensionBraces(model);
+            indicators = new SuspensionIndicators(this, model);
             ready = true;
             All.Add(this);
             Plugin.Log.LogDebug("Suspension adjustment ready: " + name + ", " + mounts.Count + " physical mounts.");
@@ -104,6 +106,7 @@ namespace PartAdjustment
         {
             foreach (var target in picks)
                 if (target != null && target.PickCollider != null) target.PickCollider.enabled = pickable;
+            indicators?.Update(pickable);
         }
 
         internal void Change(float widthDelta, float heightDelta, bool reset)
@@ -191,6 +194,7 @@ namespace PartAdjustment
 
         private void OnDestroy()
         {
+            indicators?.Destroy();
             All.Remove(this);
             if (ToolRunner.Active == this) ToolRunner.Active = null;
         }
