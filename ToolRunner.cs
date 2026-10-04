@@ -61,6 +61,7 @@ namespace PartAdjustment
         {
             var target = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
             if (target == null || target.Adjustment == null || !Plugin.Enabled.Value) return false;
+            AdjustmentRunner.Stop();
             Tool = fsm.Owner.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == "UseAdjustTool");
             Active = target.Adjustment;
             return true;
@@ -73,6 +74,12 @@ namespace PartAdjustment
             if (visibility.Changed(toolOn, SuspensionAdjustment.Revision))
                 foreach (var adjustment in SuspensionAdjustment.All) if (adjustment != null) adjustment.SetPickable(toolOn);
             if (!toolOn)
+            {
+                Active = null;
+                hint.Show(false);
+                return;
+            }
+            if (AdjustmentRunner.Session != null)
             {
                 Active = null;
                 hint.Show(false);
@@ -105,7 +112,7 @@ namespace PartAdjustment
             var target = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
             bool hovering = target != null && target.Adjustment != null
                 && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag");
-            bool show = toolOn && (hovering || Active != null) && Time.timeScale > 0f
+            bool show = toolOn && (hovering || Active != null || AdjustmentRunner.Session != null || AdjustmentRunner.Hover != null) && Time.timeScale > 0f
                 && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
             if (mouseIcon == null || !mouseIcon.isActiveAndEnabled) return;
             if (show)
@@ -126,6 +133,7 @@ namespace PartAdjustment
 
         private void OnDestroy()
         {
+            AdjustmentRunner.Stop();
             hint.Destroy();
             foreach (var adjustment in SuspensionAdjustment.All) if (adjustment != null) adjustment.SetPickable(false);
             pendingVehicles.Clear();

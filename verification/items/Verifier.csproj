@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Plugin.cs" Link="Plugin.cs" />
+    <Compile Include="../../AdjustmentSession.cs" Link="AdjustmentSession.cs" />
+    <Compile Include="../../AdjustmentRunner.cs" Link="AdjustmentRunner.cs" />
+    <Compile Include="../../AdjustmentHint.cs" Link="AdjustmentHint.cs" />
+    <Compile Include="../../Controls.cs" Link="Controls.cs" />
+    <Compile Include="../../ItemPatches.cs" Link="ItemPatches.cs" />
+    <Compile Include="Runtime.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>

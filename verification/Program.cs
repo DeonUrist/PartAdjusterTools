@@ -95,8 +95,8 @@ internal static class Program
     {
         var plugin = Assembly.LoadFrom(dll);
         Check(plugin.GetTypes().Length > 0, "Plugin types load with game/BepInEx assemblies only");
-        Check(!plugin.GetReferencedAssemblies().Any(a => new[] { "Gunplay", "GunplayHUD", "NPCAI", "Apocaraider", "Apocasetter", "WomenOfWasteland" }.Contains(a.Name)), "No hard dependency on another mod");
-        var managed = new[] { "Assembly-CSharp", "Assembly-CSharp-firstpass", "NWH.WheelController" }
+        Check(!plugin.GetReferencedAssemblies().Any(a => new[] { "Gunplay", "GunplayHUD", "NPCAI", "Apocaraider", "Apocasetter", "WomenOfWasteland", "ItemAdjustment" }.Contains(a.Name)), "No hard dependency on another mod");
+        var managed = new[] { "Assembly-CSharp", "Assembly-CSharp-firstpass", "NWH.WheelController", "PlayMaker" }
             .Select(name => Assembly.LoadFrom(Path.Combine(game, "Apocalypter_Data/Managed", name + ".dll"))).ToArray();
         var targets = new[] {
             "HutongGames.PlayMaker.Actions.SendEvent:OnEnter",
@@ -104,7 +104,11 @@ internal static class Program
             "ES3PlayMaker.SaveAll:Enter", "ES3PlayMaker.LoadAll:Enter",
             "ES3PlayMaker.PMDataWrapper:ApplyVariables",
             "NWH.WheelController3D.WheelController:OnEnable",
-            "ES3Types.ES3Type_GameObject:GetChildren"
+            "ES3Types.ES3Type_GameObject:GetChildren",
+            "InsaneSystems.InputManager.InputController:GetKeyActionIsDown",
+            "InsaneSystems.InputManager.InputController:GetKeyActionIsActive",
+            "InsaneSystems.InputManager.InputController:GetKeyActionIsUp",
+            "HutongGames.PlayMaker.Actions.Rotate:DoRotate"
         };
         foreach (var target in targets)
         {
@@ -113,6 +117,16 @@ internal static class Program
             Check(type != null, "Hook type exists: " + split[0]);
             Check(type.GetMethod(split[1], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static) != null, "Hook method exists: " + target);
         }
+        foreach (var name in new[] { "GetKeyActionIsDown", "GetKeyActionIsActive", "GetKeyActionIsUp" })
+        {
+            var method = typeof(InputController).GetMethod(name, new[] { typeof(string) });
+            Check(method != null && method.IsStatic && method.ReturnType == typeof(bool), "Native secondary-input hook signature: " + name);
+        }
+        var inputPatch = plugin.GetType("PartAdjustment.SecondaryInputPatch", true);
+        Check(inputPatch.GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Count(m => m.IsDefined(typeof(HarmonyPrefix), false)) == 3,
+            "All three secondary-input hooks have prefix metadata");
+        Check(plugin.GetType("PartAdjustment.HeldRotationPatch", true).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static) != null,
+            "Held rotation has convention-based Harmony prefix");
         var harmony = new Harmony("PartAdjustment.OfflineVerifier");
         try
         {
