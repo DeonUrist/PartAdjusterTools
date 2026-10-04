@@ -1,0 +1,13 @@
+name,modelActive,hingeBranchActive,wheelFsmEnabled,factoryX,factoryY,factoryFrontZ,factoryRearZ,stockX,stockY,stockFrontZ,stockRearZ
+Vulture,true,true,true,0.638,-0.149,1.421,-1.098,0.638,-0.149,1.421,-1.098
+Duke,true,true,true,0.787,-0.149,1.598,-1.377,0.787,-0.149,1.598,-1.377
+Junker,true,true,true,0.671,-0.2,1.348,-1.131,0.671,-0.2,1.348,-1.131
+Rustliner,false,false,false,1.021,-0.341,3.288,-2.09,0.797,-0.55,1.63,-2.09
+TinyTyrant,true,true,true,0.6088,-0.425,1.02,-1.002,0.6088,-0.425,1.02,-1.002
+PipeRat,true,true,true,0.566773,-0.425,0.988281,-0.876,0.566773,-0.425,0.988281,-0.876
+Poloska,true,true,true,0.566773,-0.425,0.988281,-0.840576,0.566773,-0.425,0.988281,-0.840576
+Outrider,true,true,true,0.749756,-0.149,1.557,-1.098,0.749756,-0.149,1.557,-1.098
+Rustallion,true,true,true,0.729736,-0.148926,1.517822,-1.080322,0.729736,-0.148926,1.517822,-1.080322
+Rustcargo,false,false,false,0.9,-0.55,1.63,-2.09,0.797,-0.55,1.63,-2.09
+PigPen,true,true,true,0.752,-0.23,1.289,-1.098,0.752,-0.23,1.289,-1.098
+Rustchief,false,false,false,0.94,-0.5,1.496,-1.922,0.797,-0.55,1.63,-2.09

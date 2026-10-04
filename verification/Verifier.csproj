@@ -9,10 +9,23 @@
   <ItemGroup>
     <Compile Include="../AdjustmentMath.cs" Link="AdjustmentMath.cs" />
     <Compile Include="../SaveVariables.cs" Link="SaveVariables.cs" />
+    <Compile Include="../SuspensionSupport.cs" Link="SuspensionSupport.cs" />
+    <Compile Include="../LegacySuspensionRecovery.cs" Link="LegacySuspensionRecovery.cs" />
+    <Compile Include="../ToolVisibilityState.cs" Link="ToolVisibilityState.cs" />
+    <Compile Include="../SuspensionControls.cs" Link="SuspensionControls.cs" />
     <Reference Include="PlayMaker"><HintPath>$(GameDir)/Apocalypter_Data/Managed/PlayMaker.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameDir)/Apocalypter_Data/Managed/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameDir)/Apocalypter_Data/Managed/UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(GameDir)/Apocalypter_Data/Managed/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(GameDir)/Apocalypter_Data/Managed/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NWH.WheelController"><HintPath>$(GameDir)/Apocalypter_Data/Managed/NWH.WheelController.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NWH.Common"><HintPath>$(GameDir)/Apocalypter_Data/Managed/NWH.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GameDir)/Apocalypter_Data/Managed/UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(GameDir)/BepInEx/core/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(GameDir)/BepInEx/core/0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="VehicleFixtures.csv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="CheckGameDir" BeforeTargets="ResolveReferences" Condition="'$(GameDir)' == ''">
     <Error Text="Pass -p:GameDir=path-to-installed-Apocalypter or set APOCALYPTER_GAME_DIR." />

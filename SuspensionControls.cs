@@ -14,18 +14,43 @@ namespace PartAdjustment
 
         internal static bool Pressed(string action) => InputController.GetKeyActionIsDown(action);
 
-        private static string Keys(string actionName)
+        private static readonly string[] names = { Left, Right, Down, Up, Reset };
+        private static readonly KeyAction[] actions = new KeyAction[5];
+        private static readonly KeyCode[] keys = new KeyCode[10];
+        private static string hint;
+
+        private static string Keys(KeyAction action)
         {
-            var action = InputController.GetKeyAction(actionName);
             if (action.Key == KeyCode.None)
                 return action.AlternativeKey == KeyCode.None ? "Unbound" : action.AltKeyName;
             if (action.AlternativeKey == KeyCode.None || action.AlternativeKey == action.Key) return action.KeyName;
             return action.KeyName + " or " + action.AltKeyName;
         }
 
-        internal static string Hint =>
-            Keys(Left) + " / " + Keys(Right) + " - narrow / widen wheel spacing\n"
-            + Keys(Down) + " / " + Keys(Up) + " - lower / raise suspension\n"
-            + Keys(Reset) + " - reset suspension";
+        internal static string Hint
+        {
+            get
+            {
+                for (int i = 0; i < names.Length; i++) actions[i] = InputController.GetKeyAction(names[i]);
+                return HintFor(actions);
+            }
+        }
+
+        internal static string HintFor(KeyAction[] currentActions)
+        {
+            bool changed = hint == null;
+            for (int i = 0; i < names.Length; i++)
+            {
+                var action = currentActions[i];
+                if (keys[i * 2] != action.Key || keys[i * 2 + 1] != action.AlternativeKey) changed = true;
+                keys[i * 2] = action.Key;
+                keys[i * 2 + 1] = action.AlternativeKey;
+            }
+            if (changed)
+                hint = Keys(currentActions[0]) + " / " + Keys(currentActions[1]) + " - narrow / widen wheel spacing\n"
+                    + Keys(currentActions[2]) + " / " + Keys(currentActions[3]) + " - lower / raise suspension\n"
+                    + Keys(currentActions[4]) + " - reset suspension";
+            return hint;
+        }
     }
 }

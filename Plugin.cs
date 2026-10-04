@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.0.5")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.0.6")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";
@@ -24,7 +24,7 @@ namespace PartAdjustment
             HeightStep = Config.Bind("Adjustment", "HeightStep", 0.025f, new ConfigDescription("Suspension and wheel mount movement in metres per press of the game's Adjust down/up controls.", new AcceptableValueRange<float>(0.005f, 0.1f)));
             HeightLimit = Config.Bind("Adjustment", "HeightLimit", 0.5f, new ConfigDescription("Maximum vertical offset in either direction, in metres, relative to the standard mounts.", new AcceptableValueRange<float>(0.05f, 1f)));
             new Harmony(Guid).PatchAll(typeof(Plugin).Assembly);
-            SceneManager.sceneLoaded += (scene, mode) => EnsureRunner();
+            SceneManager.sceneLoaded += (scene, mode) => { EnsureRunner(); ToolRunner.SceneChanged(); };
             EnsureRunner();
             Logger.LogInfo("Part Adjustment loaded.");
         }

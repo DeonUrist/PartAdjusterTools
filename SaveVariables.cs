@@ -12,6 +12,16 @@ namespace PartAdjustment
         internal const string ModelScale = "PartAdjustment_ModelScale";
         internal const string HingePosition = "PartAdjustment_HingePosition";
 
+        internal static void Remove(FsmVariables variables)
+        {
+            if (!variables.FloatVariables.Any(v => v.Name == Width || v.Name == Height)
+                && !variables.Vector3Variables.Any(v => v.Name == ModelPosition || v.Name == ModelScale || v.Name == HingePosition)) return;
+            variables.FloatVariables = variables.FloatVariables.Where(v => v.Name != Width && v.Name != Height).ToArray();
+            variables.Vector3Variables = variables.Vector3Variables.Where(v => v.Name != ModelPosition
+                && v.Name != ModelScale && v.Name != HingePosition).ToArray();
+            variables.Reinitialize();
+        }
+
         internal static FsmFloat Float(FsmVariables variables, string name, float fallback)
         {
             var value = variables.FloatVariables.FirstOrDefault(v => v.Name == name);

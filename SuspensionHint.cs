@@ -10,6 +10,7 @@ namespace PartAdjustment
         private readonly Dictionary<Graphic, bool> originals = new Dictionary<Graphic, bool>();
         private Text label;
         private bool shown;
+        private float nextFind;
 
         internal void Show(bool value)
         {
@@ -24,6 +25,9 @@ namespace PartAdjustment
             }
             if (label == null)
             {
+                if (shown) Show(false);
+                if (Time.unscaledTime < nextFind) return;
+                nextFind = Time.unscaledTime + 1f;
                 var root = Resources.FindObjectsOfTypeAll<Transform>().FirstOrDefault(t => t.name == "AdjustUI" && t.gameObject.scene.IsValid());
                 if (root == null) return;
                 var template = root.GetComponentsInChildren<Text>(true).FirstOrDefault();
@@ -50,11 +54,19 @@ namespace PartAdjustment
             {
                 foreach (var graphic in label.transform.parent.GetComponentsInChildren<Graphic>(true))
                     if (graphic != label) originals[graphic] = graphic.enabled;
+                label.gameObject.SetActive(true);
                 shown = true;
             }
-            foreach (var graphic in originals.Keys) if (graphic != null) graphic.enabled = false;
-            label.gameObject.SetActive(true);
-            label.text = SuspensionControls.Hint;
+            foreach (var graphic in originals.Keys) if (graphic != null && graphic.enabled) graphic.enabled = false;
+            if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
+            var text = SuspensionControls.Hint;
+            if (label.text != text) label.text = text;
+        }
+
+        internal void Destroy()
+        {
+            Show(false);
+            if (label != null) Object.Destroy(label.gameObject);
         }
     }
 }

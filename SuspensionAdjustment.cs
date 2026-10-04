@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HutongGames.PlayMaker;
-using HutongGames.PlayMaker.Actions;
 using NWH.WheelController3D;
 using UnityEngine;
 
@@ -19,6 +18,7 @@ namespace PartAdjustment
     public sealed class SuspensionAdjustment : MonoBehaviour
     {
         internal static readonly List<SuspensionAdjustment> All = new List<SuspensionAdjustment>();
+        internal static int Revision;
         internal float Width = 1f, Height;
         internal Transform Hinge;
         private Transform model;
@@ -27,6 +27,9 @@ namespace PartAdjustment
         private readonly List<SuspensionPickTarget> picks = new List<SuspensionPickTarget>();
         private SuspensionBraces braces;
         private SuspensionIndicators indicators;
+        private PlayMakerFSM attachment, suspensionCheck;
+        private Rigidbody body;
+        private bool toolRequested, pickable;
         private bool ready;
 
         private sealed class Mount
@@ -34,19 +37,17 @@ namespace PartAdjustment
             internal Transform Transform;
             internal Vector3 Baseline;
             internal float Center;
+            internal PlayMakerFSM Suspension;
         }
 
         internal static SuspensionAdjustment Ensure(Transform car)
         {
             if (car == null || !car.gameObject.scene.IsValid()) return null;
             var existing = car.GetComponent<SuspensionAdjustment>();
-            if (existing != null) return existing.ready ? existing : null;
-            var model = car.Find("suspension_model");
-            var hinge = car.Find("hinge_suspension_parent/hinge_suspension");
-            if (model == null || hinge == null) return null;
-            var wheels = car.GetComponentsInChildren<WheelController>(true)
-                .Where(w => w.transform.parent == car && w.name.StartsWith("hinge_wheel_", StringComparison.Ordinal)).ToArray();
-            if (wheels.Length < 4) return null;
+            if (existing != null) return existing.Supported() ? existing : null;
+            Transform model, hinge;
+            WheelController[] wheels;
+            if (!SuspensionSupport.TryAssembly(car, out model, out hinge, out wheels)) return null;
             var adjustment = car.gameObject.AddComponent<SuspensionAdjustment>();
             adjustment.Initialize(model, hinge, wheels);
             return adjustment;
@@ -59,8 +60,12 @@ namespace PartAdjustment
             modelPosition = model.localPosition;
             modelScale = model.localScale;
             hingePosition = hinge.localPosition;
+            attachment = SuspensionSupport.EnabledFsm(hinge, "vehPart_Attach");
+            suspensionCheck = SuspensionSupport.EnabledFsm(hinge, "checkSuspension");
+            body = GetComponent<Rigidbody>();
             foreach (var wheel in wheels)
-                mounts.Add(new Mount { Transform = wheel.transform, Baseline = VanillaPosition(wheel.transform) });
+                mounts.Add(new Mount { Transform = wheel.transform, Baseline = VanillaPosition(wheel.transform),
+                    Suspension = SuspensionSupport.EnabledFsm(wheel.transform, "Suspension") });
             RefreshCenters();
             // Separate trigger targets preserve the layer/tag and attachment child counts of all vanilla hinges.
             // Never parent a selection target under hinge_suspension: GameObjectHasChildren detects the lift kit there.
@@ -84,48 +89,63 @@ namespace PartAdjustment
             indicators = new SuspensionIndicators(this, model);
             ready = true;
             All.Add(this);
+            Revision++;
             Plugin.Log.LogDebug("Suspension adjustment ready: " + name + ", " + mounts.Count + " physical mounts.");
         }
 
         private static Vector3 VanillaPosition(Transform wheel)
         {
-            var fsm = wheel.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == "Suspension");
+            var fsm = SuspensionSupport.EnabledFsm(wheel, "Suspension");
             // These constants are authoritative even if ES3 has already restored an adjusted transform.
             var state = fsm?.FsmStates.FirstOrDefault(s => s.Name == fsm.ActiveStateName)
                 ?? fsm?.FsmStates.FirstOrDefault(s => s.Name == "stock");
-            var action = state?.Actions.OfType<SetPosition>().FirstOrDefault(a => a.space == Space.Self);
-            if (action == null) return wheel.localPosition;
-            var position = action.vector != null && !action.vector.IsNone ? action.vector.Value : wheel.localPosition;
-            if (action.x != null && !action.x.IsNone) position.x = action.x.Value;
-            if (action.y != null && !action.y.IsNone) position.y = action.y.Value;
-            if (action.z != null && !action.z.IsNone) position.z = action.z.Value;
-            return position;
+            var action = SuspensionSupport.MountAction(fsm == null ? null : SuspensionSupport.Actions(fsm.Fsm, state), fsm != null,
+                a => fsm.Fsm.GetOwnerDefaultTarget(a.gameObject) == wheel.gameObject);
+            return SuspensionSupport.Position(action, wheel.localPosition);
         }
 
-        internal void SetPickable(bool pickable)
+        internal void SetPickable(bool toolOn)
         {
+            toolRequested = toolOn;
+            SetColliderVisibility(toolOn && Supported());
+            if (!toolOn) indicators?.Hide();
+        }
+
+        private void SetColliderVisibility(bool value)
+        {
+            if (pickable == value) return;
+            pickable = value;
             foreach (var target in picks)
                 if (target != null && target.PickCollider != null) target.PickCollider.enabled = pickable;
-            indicators?.Update(pickable);
+        }
+
+        internal void UpdateIndicators(Camera camera)
+        {
+            SetColliderVisibility(toolRequested && Supported());
+            if (pickable) indicators?.Update(camera);
+            else indicators?.Hide();
         }
 
         internal void Change(float widthDelta, float heightDelta, bool reset)
         {
-            Width = reset ? 1f : AdjustmentMath.Width(Width + widthDelta);
-            Height = reset ? 0f : heightDelta != 0f ? AdjustmentMath.Height(Height + heightDelta, Plugin.HeightLimit.Value) : Height;
+            if (!Supported()) return;
+            float width = reset ? 1f : AdjustmentMath.Width(Width + widthDelta);
+            float height = reset ? 0f : heightDelta != 0f ? AdjustmentMath.Height(Height + heightDelta, Plugin.HeightLimit.Value) : Height;
+            if (!reset && width == Width && height == Height) return;
+            Width = width;
+            Height = height;
             Apply();
         }
 
         internal void Apply()
         {
-            if (!ready) return;
+            if (!Supported()) return;
             model.localScale = new Vector3(modelScale.x * Width, modelScale.y, modelScale.z);
             model.localPosition = modelPosition + Vector3.up * Height;
             braces.ShowForWidth(Width);
             // The lift kit/attachment trigger moves vertically with the assembly, but is never stretched.
             if (Hinge != null) Hinge.localPosition = hingePosition + Hinge.parent.InverseTransformVector(transform.TransformVector(Vector3.up * Height));
             foreach (var mount in mounts) ApplyMount(mount);
-            var body = GetComponent<Rigidbody>();
             if (body != null) body.WakeUp();
         }
 
@@ -167,18 +187,28 @@ namespace PartAdjustment
             var position = mount.Baseline;
             position.x = AdjustmentMath.SpacedX(position.x, mount.Center, Width);
             position.y += Height;
-            mount.Transform.localPosition = position;
+            if (!mount.Transform.localPosition.Equals(position)) mount.Transform.localPosition = position;
             // NWH WheelController.Step reads this mount to cast the suspension ray, apply forces, and place
             // wheel.visualTransform and wheel.colliderTransform. The wheel's own scale/radius stays unchanged.
         }
 
         internal void VanillaMountChanged(Transform wheel)
         {
-            var mount = mounts.FirstOrDefault(m => m.Transform == wheel);
+            if (!Supported()) return;
+            Mount mount = null;
+            foreach (var candidate in mounts) if (candidate.Transform == wheel) { mount = candidate; break; }
             if (mount == null) return;
             mount.Baseline = wheel.localPosition;
             RefreshCenters();
             foreach (var m in mounts) ApplyMount(m);
+        }
+
+        private bool Supported()
+        {
+            if (!ready || !SuspensionSupport.BranchActive(model, transform) || !SuspensionSupport.BranchActive(Hinge, transform)
+                || attachment == null || !attachment.enabled || suspensionCheck == null || !suspensionCheck.enabled) return false;
+            foreach (var mount in mounts) if (mount.Transform == null || mount.Suspension == null || !mount.Suspension.enabled) return false;
+            return true;
         }
 
         private void RefreshCenters()
@@ -186,8 +216,14 @@ namespace PartAdjustment
             // Match opposite mounts at the same longitudinal position, keeping each axle centered.
             foreach (var mount in mounts)
             {
-                var opposite = mounts.Where(m => m != mount && Mathf.Sign(m.Baseline.x) != Mathf.Sign(mount.Baseline.x))
-                    .OrderBy(m => Mathf.Abs(m.Baseline.z - mount.Baseline.z)).FirstOrDefault();
+                Mount opposite = null;
+                float nearest = float.PositiveInfinity;
+                foreach (var candidate in mounts)
+                {
+                    if (candidate == mount || Mathf.Sign(candidate.Baseline.x) == Mathf.Sign(mount.Baseline.x)) continue;
+                    float distance = Mathf.Abs(candidate.Baseline.z - mount.Baseline.z);
+                    if (distance < nearest) { opposite = candidate; nearest = distance; }
+                }
                 mount.Center = opposite == null ? 0f : (mount.Baseline.x + opposite.Baseline.x) * 0.5f;
             }
         }
@@ -196,6 +232,7 @@ namespace PartAdjustment
         {
             indicators?.Destroy();
             All.Remove(this);
+            Revision++;
             if (ToolRunner.Active == this) ToolRunner.Active = null;
         }
     }

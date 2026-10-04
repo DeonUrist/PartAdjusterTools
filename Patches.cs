@@ -6,6 +6,12 @@ using UnityEngine;
 
 namespace PartAdjustment
 {
+    [HarmonyPatch(typeof(NWH.WheelController3D.WheelController), "OnEnable")]
+    internal static class WheelDiscoveryPatch
+    {
+        private static void Postfix(NWH.WheelController3D.WheelController __instance) => ToolRunner.QueueVehicle(__instance);
+    }
+
     [HarmonyPatch(typeof(SendEvent), nameof(SendEvent.OnEnter))]
     internal static class ToolEventPatch
     {
@@ -37,6 +43,9 @@ namespace PartAdjustment
             if (__instance.Fsm.Name != "Suspension") return;
             var owner = __instance.Fsm.Owner;
             if (owner == null || !owner.name.StartsWith("hinge_wheel_")) return;
+            if (!__instance.Enabled || __instance.space != Space.Self
+                || SuspensionSupport.EnabledFsm(owner.transform, "Suspension") == null
+                || __instance.Fsm.GetOwnerDefaultTarget(__instance.gameObject) != owner) return;
             var adjustment = owner.transform.parent?.GetComponent<SuspensionAdjustment>();
             if (adjustment != null) adjustment.VanillaMountChanged(owner.transform);
         }
@@ -54,8 +63,20 @@ namespace PartAdjustment
             {
                 var adjustment = SuspensionAdjustment.Ensure(__instance.Fsm.Owner?.transform);
                 if (adjustment != null) adjustment.WriteSaveVariables(__instance.Fsm.Variables);
+                else SaveVariables.Remove(__instance.Fsm.Variables);
             }
             catch (Exception e) { Plugin.Log.LogError("Could not save suspension adjustment: " + e); }
+        }
+    }
+
+    [HarmonyPatch(typeof(ES3PlayMaker.PMDataWrapper), nameof(ES3PlayMaker.PMDataWrapper.ApplyVariables))]
+    internal static class LegacySuspensionSavePatch
+    {
+        private static void Postfix(ES3PlayMaker.PMDataWrapper __instance, HutongGames.PlayMaker.Fsm fsm, bool fsmVariables)
+        {
+            if (!fsmVariables || fsm?.Name != "saveItemVar") return;
+            try { LegacySuspensionRecovery.Restore(fsm.Owner?.transform, fsm.Variables, __instance.objs); }
+            catch (Exception e) { Plugin.Log.LogError("Could not recover legacy suspension mounts: " + e); }
         }
     }
 
