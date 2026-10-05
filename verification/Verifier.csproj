@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="items/**/*.cs" />
+    <Compile Remove="unity/**/*.cs" />
     <Compile Include="../AdjustmentMath.cs" Link="AdjustmentMath.cs" />
     <Compile Include="../SaveVariables.cs" Link="SaveVariables.cs" />
     <Compile Include="../SuspensionSupport.cs" Link="SuspensionSupport.cs" />

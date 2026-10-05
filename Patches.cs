@@ -43,9 +43,10 @@ namespace PartAdjustment
             if (__instance.Fsm.Name != "Suspension") return;
             var owner = __instance.Fsm.Owner;
             if (owner == null || !owner.name.StartsWith("hinge_wheel_")) return;
+            // PlayMaker's Owner is a component; the resolved action target is a GameObject.
             if (!__instance.Enabled || __instance.space != Space.Self
                 || SuspensionSupport.EnabledFsm(owner.transform, "Suspension") == null
-                || __instance.Fsm.GetOwnerDefaultTarget(__instance.gameObject) != owner) return;
+                || __instance.Fsm.GetOwnerDefaultTarget(__instance.gameObject) != owner.gameObject) return;
             var adjustment = owner.transform.parent?.GetComponent<SuspensionAdjustment>();
             if (adjustment != null) adjustment.VanillaMountChanged(owner.transform, __instance.State.Name);
         }
