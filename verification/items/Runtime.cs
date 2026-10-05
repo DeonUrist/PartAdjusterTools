@@ -15,7 +15,9 @@ namespace UnityEngine
         public static void Destroy(Object value) { if (value is GameObject go) go.activeSelf = false; }
         public static GameObject Instantiate(GameObject original, Transform parent, bool worldPositionStays)
         {
-            var copy=new GameObject(original.name);copy.transform.parent=parent;
+            var copy=new GameObject(original.name, original.transform is RectTransform ? new[]{typeof(RectTransform)} : Array.Empty<Type>());copy.transform.parent=parent;
+            if(original.transform is RectTransform source && copy.transform is RectTransform targetRect)
+            { targetRect.anchorMin=source.anchorMin;targetRect.anchorMax=source.anchorMax;targetRect.pivot=source.pivot;targetRect.anchoredPosition=source.anchoredPosition;targetRect.sizeDelta=source.sizeDelta; }
             var text=original.GetComponent<UI.Text>();
             if(text!=null) { var target=copy.AddComponent<UI.Text>();target.text=text.text;target.verticalOverflow=text.verticalOverflow; }
             foreach(var fsm in original.GetComponents<PlayMakerFSM>()) { var target=copy.AddComponent<PlayMakerFSM>();target.FsmName=fsm.FsmName; }
@@ -65,7 +67,7 @@ namespace UnityEngine
         public bool activeInHierarchy => activeSelf && (transform.parent == null || transform.parent.gameObject.activeInHierarchy);
         public readonly Transform transform;
         private readonly List<Component> components = new List<Component>();
-        public GameObject(string value) { name = value; transform = new Transform { gameObject = this }; components.Add(transform); All.Add(this); }
+        public GameObject(string value, params Type[] types) { name = value; transform = types.Contains(typeof(RectTransform)) ? new RectTransform { gameObject = this } : new Transform { gameObject = this }; components.Add(transform); All.Add(this); }
         public T AddComponent<T>() where T : Component, new() { var result = new T { gameObject = this }; components.Add(result); return result; }
         public T GetComponent<T>() where T : Component => components.OfType<T>().FirstOrDefault();
         public T[] GetComponents<T>() where T : Component => components.OfType<T>().ToArray();

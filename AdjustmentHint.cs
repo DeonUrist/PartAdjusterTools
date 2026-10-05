@@ -13,6 +13,9 @@ namespace PartAdjustment
         private int referenceFrame;
         private KeyCode modifier, alternative;
         private GameObject panel;
+        private RectTransform nativePanel;
+        private Vector2 nativeAnchorMin, nativeAnchorMax, nativePosition;
+        private bool nativeMoved;
         private float nextSearch;
         private VerticalWrapMode originalOverflow;
         private static readonly string[] names = { Controls.Mode, Controls.Left, Controls.Right, Controls.Up, Controls.Down, Controls.Forward, Controls.Backward, Controls.Reset };
@@ -59,6 +62,10 @@ namespace PartAdjustment
                 var original = Resources.FindObjectsOfTypeAll<Transform>().FirstOrDefault(t => t.name == "AdjustUI" && t.gameObject.scene.IsValid());
                 if (original != null)
                 {
+                    MoveNativePanel(false);
+                    nativePanel = original as RectTransform;
+                    // Clone before moving the native instructions so our detailed controls
+                    // retain their existing position instead of overlapping them again.
                     panel = Object.Instantiate(original.gameObject, original.parent, false);
                     panel.name = "PartAdjustment.ItemControls";
                     foreach (var fsm in panel.GetComponentsInChildren<PlayMakerFSM>(true)) { fsm.enabled = false; Object.Destroy(fsm); }
@@ -78,6 +85,7 @@ namespace PartAdjustment
                     panelDirty = true;
                 }
             }
+            MoveNativePanel(session != null && panel != null);
             if (panel == null) return;
             if (panel.activeSelf != (session != null)) panel.SetActive(session != null);
             if (session == null) return;
@@ -112,6 +120,29 @@ namespace PartAdjustment
             }
             return node == null ? null : node.GetComponent<Text>();
         }
+        private void MoveNativePanel(bool show)
+        {
+            if (nativePanel == null) { nativeMoved = false; return; }
+            if (show == nativeMoved) return;
+            if (show)
+            {
+                nativeAnchorMin = nativePanel.anchorMin;
+                nativeAnchorMax = nativePanel.anchorMax;
+                nativePosition = nativePanel.anchoredPosition;
+                nativePanel.anchorMin = nativePanel.anchorMax = new Vector2(0f, 1f);
+                // Keep the original pivot and child layout; put the title 20 canvas
+                // units from the top/left edges, respecting the game's Canvas scaling.
+                nativePanel.anchoredPosition = new Vector2(20f + nativePanel.sizeDelta.x * nativePanel.pivot.x,
+                    -20f - nativePanel.sizeDelta.y * (1f - nativePanel.pivot.y));
+            }
+            else
+            {
+                nativePanel.anchorMin = nativeAnchorMin;
+                nativePanel.anchorMax = nativeAnchorMax;
+                nativePanel.anchoredPosition = nativePosition;
+            }
+            nativeMoved = show;
+        }
         private string ModifierHint()
         {
             if (modifier == KeyCode.None) return alternative == KeyCode.None ? "Unbound modifier" : Controls.Label(alternative);
@@ -130,6 +161,6 @@ namespace PartAdjustment
             if (useText != null && useText.verticalOverflow != originalOverflow) useText.verticalOverflow = originalOverflow;
             useText = null;
         }
-        internal void Dispose() { ReleaseUseText(); if (panel != null) Object.Destroy(panel); }
+        internal void Dispose() { ReleaseUseText(); MoveNativePanel(false); if (panel != null) Object.Destroy(panel); }
     }
 }

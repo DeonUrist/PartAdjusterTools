@@ -208,7 +208,10 @@ internal static class Program
     {
         var use=new GameObject("ItemUse").AddComponent<UnityEngine.UI.Text>();use.text="Detach: F";
         FsmVariables.GlobalVariables.Objects["UI_ItemUse"]=new FsmGameObject {Value=use.gameObject};
-        var native=new GameObject("AdjustUI");native.AddComponent<UnityEngine.UI.Text>();
+        var native=new GameObject("AdjustUI",typeof(RectTransform));native.AddComponent<UnityEngine.UI.Text>();
+        var nativeRect=(RectTransform)native.transform;
+        nativeRect.anchorMin=nativeRect.anchorMax=new Vector2(0f,1f);nativeRect.pivot=new Vector2(.5f,.5f);
+        nativeRect.anchoredPosition=new Vector2(219.8f,-547.6f);nativeRect.sizeDelta=new Vector2(400f,30f);
         foreach(var name in new[]{"mode","change mode","buttons","reset","PartAdjustment.SuspensionHint"})
         { var child=new GameObject(name);child.transform.parent=native.transform;child.AddComponent<UnityEngine.UI.Text>(); }
         var hint=new AdjustmentHint();Frame();hint.Refresh();
@@ -223,6 +226,9 @@ internal static class Program
         Check(use.text=="Buy: F\nStop adjusting: E","Active session shows finish hint");
         var panel=GameObject.All.Find(g=>g.name=="PartAdjustment.ItemControls");
         Check(panel!=null && panel.activeSelf,"Item session creates its own control panel");
+        Check(nativeRect.anchoredPosition.x==220f && nativeRect.anchoredPosition.y==-35f,"Native instructions move to the top left during item adjustment");
+        var panelRect=(RectTransform)panel.transform;
+        Check(panelRect.anchoredPosition.x==219.8f && panelRect.anchoredPosition.y==-547.6f,"Detailed item controls keep the original position, apart from native instructions");
         var resetText=panel.transform.Find("reset").gameObject.GetComponent<UnityEngine.UI.Text>();
         Check(resetText.text.Contains("LeftAlt - faster movement"),"Panel shows the Left Alt modifier");
         var clonedSuspension=panel.transform.Find("PartAdjustment.SuspensionHint");
@@ -233,6 +239,7 @@ internal static class Program
         var tool=AdjustmentRunner.Find(camera,"UseAdjustTool");tool.enabled=false;hint.Refresh();
         Check(use.text=="Buy: F" && use.verticalOverflow==UnityEngine.UI.VerticalWrapMode.Truncate,"Unequipping restores native hint text and overflow");
         Check(!panel.activeSelf,"Unequipping hides control panel immediately");
+        Check(nativeRect.anchoredPosition.x==219.8f && nativeRect.anchoredPosition.y==-547.6f,"Unequipping restores the native panel position");
         Frame();tool.enabled=true;Frame();hint.Refresh();use.text="Native replacement";hint.Dispose();
         Check(use.text=="Native replacement","Cleanup preserves a newer native hint");
         Check(!panel.activeSelf,"Cleanup removes generated control panel");

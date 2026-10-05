@@ -2,6 +2,8 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
+Version 1.1.0 moves the native "ADJUST CAR PARTS" title and its instructions to the top left while adjusting an attached item or gauge with secondary Use (normally E). The detailed item controls retain their existing location, avoiding overlap. The native block follows Canvas scaling with a 20-unit edge margin, and its original position/anchors are restored when the session ends, the tool is put away, gameplay is suspended or the UI runner is removed. The native child layout and styling stay intact; layout writes happen only on entry/exit.
+
 Version 1.0.9 fixes wheels jumping inward on the first width adjustment after installing a lift kit, reproduced with TinyTyrant. A target check introduced in 1.0.6 compared a GameObject to its PlayMaker component, rejecting native stock/lifted mount updates. The check now compares the correct GameObjects, so installing/removing a lift kit updates the factory mount baseline and chooses the matching axle geometry. The disabled-FSM, local-space and target checks remain intact, including the bus/truck exclusions. Existing saved adjustments are recalculated on load; no reset or new save is required.
 
 Version 1.0.8 changes wheel movement to follow the matching stock/lifted mesh end, preserving factory hub clearance instead of multiplying the wheel-center offset. The model's own pivot, child transforms and scale are included; wheel size remains unchanged. Mesh bounds work on non-readable game meshes and are cached once. Its geometry fix did not catch the rejected lift-transition callback; 1.0.9 corrects that regression.
@@ -58,7 +60,7 @@ Existing saves do not require a new game. Unsupported vehicles ignore old adjust
 
 ## Installation and settings
 
-Download `PartAdjusterTools-1.0.9.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
+Download `PartAdjusterTools-1.1.0.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
 
 Restart the game after installing. BepInEx creates `BepInEx/config/com.denis.apocalypter.partadjustment.cfg` on first load. Apocasetter discovers the plugin through its normal `Apocasetter = true` opt-in; no other mod is required.
 
@@ -89,6 +91,8 @@ Version 1.0.7 validation: 472 managed checks and 93 headless checks pass. The la
 Version 1.0.8 validation: 472 managed checks and 2,544 headless checks pass, with zero build warnings/errors. `verification/SuspensionWidthFixtures.csv` records 72 wheel/mesh measurements from all nine supported prefabs, covering stock/lifted front/rear mounts. The production geometry helper is tested with those fixtures at widths 1.0, 1.025, 1.25 and 1.5, repeated reset and rotated/scaled vehicle parents. Geometry is also initialized from a model already expanded by a restored save; the original local endpoints remain authoritative. Tests reproduce the old gap growth and verify that each wheel displacement equals its mesh-end displacement. Native rendering/physics and full game save/load still require an in-game check.
 
 Version 1.0.9 validation: 472 managed checks, 2,544 headless checks and 146 native Unity checks pass. The native verifier executes the real PlayMaker actions and production Harmony callback on a synthetic TinyTyrant assembly using measured factory mounts/mesh endpoints. It covers installing/removing/reinstalling a lift kit, the first width press, maximum width, reset, three restorations of saved adjustment variables and rejection of world-space/wrong-target actions. The first widening moves the lifted front mounts from ±0.8 m to ±0.819184 m; 1.0.8 instead snapped them inward to about ±0.623 m. The native test runs in the headless menu without loading or writing a user save. This verifies callbacks/transforms, not visual rendering, driving physics or a full save-file reload.
+
+Version 1.1.0 validation: release/native verifier builds pass with zero warnings/errors, alongside 472 managed checks, 2,547 headless checks and 146 native Unity suspension checks. The existing hint checks now cover separating the native panel from item controls and restoring its position on unequip. Layout measurements come from the installed game's RectTransform data; visual HUD rendering has not been checked in an interactive session.
 
 To repeat the native regression test, first build and install the matching production DLL, close the game, then run:
 
