@@ -201,7 +201,7 @@ internal static class Program
     }
     private static int Main()
     {
-        try { Setup();PluginLifetime();Gauges();Session();Lifecycle();Rebinding();ToolGating();Mmb();Suppression();Hints();Console.WriteLine("PASS: "+checks+" headless checks of production code. Game not executed.");return 0; }
+        try { Setup();PluginLifetime();Gauges();Session();Lifecycle();Rebinding();ToolGating();Mmb();Suppression();Hints();SuspensionWidthChecks.Run(Check);Console.WriteLine("PASS: "+checks+" headless checks of production code. Game not executed.");return 0; }
         catch(Exception e) { Console.Error.WriteLine(e);return 1; }
     }
     private static void Hints()

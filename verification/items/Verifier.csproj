@@ -9,9 +9,15 @@
     <Compile Include="../../AdjustmentSession.cs" Link="AdjustmentSession.cs" />
     <Compile Include="../../AdjustmentRunner.cs" Link="AdjustmentRunner.cs" />
     <Compile Include="../../AdjustmentHint.cs" Link="AdjustmentHint.cs" />
+    <Compile Include="../../SuspensionWidthGeometry.cs" Link="SuspensionWidthGeometry.cs" />
+    <Compile Include="../../AdjustmentMath.cs" Link="AdjustmentMath.cs" />
     <Compile Include="../../Controls.cs" Link="Controls.cs" />
     <Compile Include="../../ItemPatches.cs" Link="ItemPatches.cs" />
     <Compile Include="Runtime.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="SuspensionWidthChecks.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../SuspensionWidthFixtures.csv" Link="SuspensionWidthFixtures.csv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

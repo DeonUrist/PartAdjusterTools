@@ -30,6 +30,7 @@ namespace UnityEngine
         public Transform transform => gameObject.transform;
         public string name => gameObject.name;
         public T GetComponent<T>() where T:Component => gameObject.GetComponent<T>();
+        public T[] GetComponentsInChildren<T>(bool includeInactive) where T:Component => gameObject.GetComponentsInChildren<T>(includeInactive);
     }
     public class MonoBehaviour : Component { }
     public class DefaultExecutionOrder : Attribute { public DefaultExecutionOrder(int value) { } }
@@ -85,12 +86,18 @@ namespace UnityEngine
         public Vector3 forward => rotation * Vector3.forward;
         public bool CompareTag(string value) => gameObject.CompareTag(value);
         public Transform Find(string value) => GameObject.All.FirstOrDefault(g=>g.transform.parent==this && g.name==value)?.transform;
-        public Vector3 TransformPoint(Vector3 value) => position + rotation * (value * localScale);
-        public Vector3 InverseTransformPoint(Vector3 value) => (Quaternion.Inverse(rotation) * (value - position)) / localScale;
+        public Vector3 TransformPoint(Vector3 value) { var result=localPosition+localRotation*(value*localScale);return parent==null ? result : parent.TransformPoint(result); }
+        public Vector3 InverseTransformPoint(Vector3 value) { if(parent!=null) value=parent.InverseTransformPoint(value);return (Quaternion.Inverse(localRotation)*(value-localPosition))/localScale; }
+        public Vector3 TransformVector(Vector3 value) { var result=localRotation*(value*localScale);return parent==null ? result : parent.TransformVector(result); }
+        public Vector3 InverseTransformVector(Vector3 value) { if(parent!=null) value=parent.InverseTransformVector(value);return (Quaternion.Inverse(localRotation)*value)/localScale; }
     }
     public sealed class RectTransform : Transform { public Vector2 anchorMin,anchorMax,pivot,anchoredPosition,sizeDelta; }
     public struct Vector2 { public float x,y;public Vector2(float a,float b) { x=a;y=b; } }
     public static class Resources { public static T[] FindObjectsOfTypeAll<T>() where T:Component => GameObject.All.SelectMany(g=>g.GetComponents<T>()).ToArray(); }
+    public static class Mathf { public static float Min(float a,float b)=>Math.Min(a,b);public static float Max(float a,float b)=>Math.Max(a,b);public static float Abs(float a)=>Math.Abs(a); }
+    public struct Bounds { public Vector3 center,extents; }
+    public class Mesh { public Bounds bounds; }
+    public class MeshFilter : Component { public Mesh sharedMesh; }
     public sealed class Camera : Component { public bool enabled = true; public bool isActiveAndEnabled => enabled && gameObject.activeInHierarchy; }
     public struct Vector3
     {
@@ -103,6 +110,7 @@ namespace UnityEngine
         public static Vector3 right => new Vector3(1f, 0f, 0f);
         public static Vector3 up => new Vector3(0f, 1f, 0f);
         public static Vector3 forward => new Vector3(0f, 0f, 1f);
+        public static Vector3 Scale(Vector3 a,Vector3 b)=>a*b;
         public static Vector3 operator +(Vector3 a, Vector3 b) => From(a.N + b.N);
         public static Vector3 operator -(Vector3 a, Vector3 b) => From(a.N - b.N);
         public static Vector3 operator *(Vector3 a, float b) => From(a.N * b);

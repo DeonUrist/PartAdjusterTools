@@ -27,6 +27,7 @@ namespace PartAdjustment
         private readonly List<SuspensionPickTarget> picks = new List<SuspensionPickTarget>();
         private SuspensionBraces braces;
         private SuspensionIndicators indicators;
+        private SuspensionWidthGeometry widthGeometry;
         private PlayMakerFSM attachment, suspensionCheck;
         private Rigidbody body;
         private bool toolRequested, pickable;
@@ -38,6 +39,7 @@ namespace PartAdjustment
             internal Vector3 Baseline;
             internal float Center;
             internal PlayMakerFSM Suspension;
+            internal bool Lifted;
         }
 
         internal static SuspensionAdjustment Ensure(Transform car)
@@ -64,9 +66,13 @@ namespace PartAdjustment
             suspensionCheck = SuspensionSupport.EnabledFsm(hinge, "checkSuspension");
             body = GetComponent<Rigidbody>();
             foreach (var wheel in wheels)
+            {
+                var suspension = SuspensionSupport.EnabledFsm(wheel.transform, "Suspension");
                 mounts.Add(new Mount { Transform = wheel.transform, Baseline = VanillaPosition(wheel.transform),
-                    Suspension = SuspensionSupport.EnabledFsm(wheel.transform, "Suspension") });
+                    Suspension = suspension, Lifted = suspension?.ActiveStateName == "lifted" });
+            }
             RefreshCenters();
+            widthGeometry = new SuspensionWidthGeometry(model);
             // Separate trigger targets preserve the layer/tag and attachment child counts of all vanilla hinges.
             // Never parent a selection target under hinge_suspension: GameObjectHasChildren detects the lift kit there.
             foreach (var mesh in model.GetComponentsInChildren<MeshFilter>(true))
@@ -176,7 +182,11 @@ namespace PartAdjustment
             modelPosition = SaveVariables.Vector(variables, SaveVariables.ModelPosition, modelPosition).Value;
             modelScale = SaveVariables.Vector(variables, SaveVariables.ModelScale, modelScale).Value;
             hingePosition = SaveVariables.Vector(variables, SaveVariables.HingePosition, hingePosition).Value;
-            foreach (var mount in mounts) if (mount.Transform != null) mount.Baseline = VanillaPosition(mount.Transform);
+            foreach (var mount in mounts) if (mount.Transform != null)
+            {
+                mount.Baseline = VanillaPosition(mount.Transform);
+                mount.Lifted = mount.Suspension?.ActiveStateName == "lifted";
+            }
             RefreshCenters();
             Apply();
         }
@@ -185,20 +195,22 @@ namespace PartAdjustment
         {
             if (mount.Transform == null) return;
             var position = mount.Baseline;
-            position.x = AdjustmentMath.SpacedX(position.x, mount.Center, Width);
+            if (widthGeometry.TryOffset(mount.Transform, mount.Baseline, mount.Lifted, modelScale, Width, out var offset)) position += offset;
+            else position.x = AdjustmentMath.SpacedX(position.x, mount.Center, Width); // Preserve custom meshes without recognized axle variants.
             position.y += Height;
             if (!mount.Transform.localPosition.Equals(position)) mount.Transform.localPosition = position;
             // NWH WheelController.Step reads this mount to cast the suspension ray, apply forces, and place
             // wheel.visualTransform and wheel.colliderTransform. The wheel's own scale/radius stays unchanged.
         }
 
-        internal void VanillaMountChanged(Transform wheel)
+        internal void VanillaMountChanged(Transform wheel, string state)
         {
             if (!Supported()) return;
             Mount mount = null;
             foreach (var candidate in mounts) if (candidate.Transform == wheel) { mount = candidate; break; }
             if (mount == null) return;
             mount.Baseline = wheel.localPosition;
+            mount.Lifted = state == "lifted";
             RefreshCenters();
             foreach (var m in mounts) ApplyMount(m);
         }

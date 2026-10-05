@@ -47,7 +47,7 @@ namespace PartAdjustment
                 || SuspensionSupport.EnabledFsm(owner.transform, "Suspension") == null
                 || __instance.Fsm.GetOwnerDefaultTarget(__instance.gameObject) != owner) return;
             var adjustment = owner.transform.parent?.GetComponent<SuspensionAdjustment>();
-            if (adjustment != null) adjustment.VanillaMountChanged(owner.transform);
+            if (adjustment != null) adjustment.VanillaMountChanged(owner.transform, __instance.State.Name);
         }
     }
 
