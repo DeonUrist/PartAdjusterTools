@@ -15,8 +15,8 @@ namespace PartAdjustment
     [ES3NonSerializable]
     public sealed class StandstillDamper : MonoBehaviour
     {
-        internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.5f, DamperAtRest = 3f;
-        private Rigidbody rb; private bool boosted;
+        internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.5f, DamperAtRest = 3f, HoldSpeed = 0.3f, UnholdSpeed = 0.5f;
+        private Rigidbody rb; private bool boosted, held; private RigidbodyConstraints baseConstraints;
         private WheelController[] wheels = new WheelController[0]; private float[] baseStiffness = new float[0], baseBump = new float[0], baseRebound = new float[0]; private float nextWheels;
 
         internal static bool Owned(GameObject car)
@@ -44,6 +44,17 @@ namespace PartAdjustment
                 }
             // the roll / yaw rate is bled off directly: a fraction per step, the full fraction when standing
             rb.angularVelocity *= 1f - SpinBleed * k;
+            // parked (under 0.3 m/s): the body cannot roll or pitch at all - the roll <-> sideways-grip loop has nothing to work with. The
+            // suspension still carries the car, sideways grip still holds it on a slope; released above 0.5 m/s (a push, the gas)
+            float speed = rb.velocity.magnitude;
+            if (!held && speed < HoldSpeed)
+            {
+                baseConstraints = rb.constraints;
+                rb.constraints = baseConstraints | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                rb.angularVelocity = Vector3.zero;
+                held = true;
+            }
+            else if (held && speed > UnholdSpeed) Unhold();
         }
 
         // the wheels (direct hinge_wheel_* children) and their vanilla lateral stiffness - re-read every 2 s while active (a wheel put on or
@@ -59,7 +70,8 @@ namespace PartAdjustment
         }
 
         private void Restore() { for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null) { wheels[i].LateralFrictionStiffness = baseStiffness[i]; wheels[i].DamperBumpRate = baseBump[i]; wheels[i].DamperReboundRate = baseRebound[i]; } }
-        private void Release() { if (boosted) { Restore(); boosted = false; } }
+        private void Unhold() { if (held) { rb.constraints = baseConstraints; held = false; } }
+        private void Release() { Unhold(); if (boosted) { Restore(); boosted = false; } }
         private void OnDisable() { if (rb != null) Release(); }
     }
 
