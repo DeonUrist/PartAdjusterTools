@@ -1,18 +1,23 @@
+using System.Collections.Generic;
+using NWH.WheelController3D;
 using UnityEngine;
 
 namespace PartAdjustment
 {
-    // 1.2.2: a car standing still rocks itself (seen with truck wheels on a widened, lifted TinyTyrant: the wheel loads swapped left/right
-    // twice a second, angular velocity 0.7 rad/s, lateral slip flipping sign, no collision contacts at all). The body rolls, the wheels on the
-    // body slide sideways on the ground, their sideways grip pushes the body back, it overshoots - an oscillation the vanilla lifted dampers
-    // (half the stock rate) cannot kill under the heavier loads. Below 0.6 m/s the Rigidbody gets extra angular drag; it fades out by 1.2 m/s
-    // so driving feel is untouched. The original drag is restored when the car moves. Apocapatrol has the same component for its raider
-    // cars; whichever mod attached its StandstillDamper first owns a car (checked by type name).
+    // 1.2.2 / 1.2.3: a car standing still rocks itself (seen with truck wheels on a widened, lifted TinyTyrant: wheel loads swapping left/right
+    // twice a second, angular velocity 0.6-0.7 rad/s, lateral slip flipping sign, no collision contacts). The body rolls, the wheels on it
+    // slide sideways on the ground, their sideways grip pushes the body back harder than the roll needs and it overshoots: the wheels'
+    // lateral friction drives the roll instead of damping it, and the vanilla lifted dampers (half the stock rate) cannot stop it under
+    // the heavier loads. Extra angular drag alone (1.2.2) was not enough. Below 0.6 m/s (fading out by 1.2 m/s) the driving force itself
+    // is taken away - the wheels' lateral friction stiffness is cut to a quarter - and the body's angular velocity is bled off directly
+    // each physics step. Everything is restored as soon as the car moves. Apocapatrol has the same component for its raider cars; whichever
+    // mod attached its StandstillDamper first owns a car (checked by type name).
     [ES3NonSerializable]
     public sealed class StandstillDamper : MonoBehaviour
     {
-        internal const float ExtraDrag = 4f, StillSpeed = 0.6f, FreeSpeed = 1.2f;
-        private Rigidbody rb; private float baseDrag; private bool boosted;
+        internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.35f;
+        private Rigidbody rb; private bool boosted;
+        private WheelController[] wheels = new WheelController[0]; private float[] baseStiffness = new float[0]; private float nextWheels;
 
         internal static bool Owned(GameObject car)
         {
@@ -22,16 +27,32 @@ namespace PartAdjustment
 
         private void FixedUpdate()
         {
-            if (rb == null) { rb = GetComponent<Rigidbody>(); if (rb == null) { Destroy(this); return; } baseDrag = rb.angularDrag; }
+            if (rb == null) { rb = GetComponent<Rigidbody>(); if (rb == null) { Destroy(this); return; } }
             if (!Plugin.StandstillDamping.Value || rb.isKinematic) { Release(); return; }
-            float speed = rb.velocity.magnitude;
-            float k = 1f - Mathf.InverseLerp(StillSpeed, FreeSpeed, speed);
+            float k = 1f - Mathf.InverseLerp(StillSpeed, FreeSpeed, rb.velocity.magnitude);
             if (k <= 0f) { Release(); return; }
-            if (!boosted) { baseDrag = rb.angularDrag; boosted = true; }
-            rb.angularDrag = baseDrag + ExtraDrag * k;
+            if (!boosted || Time.time >= nextWheels) Collect();
+            boosted = true;
+            for (int i = 0; i < wheels.Length; i++)
+                if (wheels[i] != null) wheels[i].LateralFrictionStiffness = Mathf.Lerp(baseStiffness[i], baseStiffness[i] * StiffnessAtRest, k);
+            // the roll / yaw rate is bled off directly: a fraction per step, the full fraction when standing
+            rb.angularVelocity *= 1f - SpinBleed * k;
         }
 
-        private void Release() { if (boosted) { rb.angularDrag = baseDrag; boosted = false; } }
+        // the wheels (direct hinge_wheel_* children) and their vanilla lateral stiffness - re-read every 2 s while active (a wheel put on or
+        // taken off changes the set; the game writes the friction values when a wheel goes on)
+        private void Collect()
+        {
+            nextWheels = Time.time + 2f;
+            if (boosted) Restore();
+            var list = new List<WheelController>();
+            foreach (var w in GetComponentsInChildren<WheelController>(true)) if (w != null && w.transform.parent == transform) list.Add(w);
+            wheels = list.ToArray(); baseStiffness = new float[wheels.Length];
+            for (int i = 0; i < wheels.Length; i++) baseStiffness[i] = wheels[i].LateralFrictionStiffness;
+        }
+
+        private void Restore() { for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null) wheels[i].LateralFrictionStiffness = baseStiffness[i]; }
+        private void Release() { if (boosted) { Restore(); boosted = false; } }
         private void OnDisable() { if (rb != null) Release(); }
     }
 
@@ -46,7 +67,7 @@ namespace PartAdjustment
             next = Time.unscaledTime + 1f;
             if (player == null) { var go = GameObject.Find("Player"); player = go != null ? go.transform : null; if (player == null) return; }
             for (var a = player.parent; a != null; a = a.parent)
-                if (a.parent == null && a.GetComponentInChildren<NWH.WheelController3D.WheelController>(true) != null)
+                if (a.parent == null && a.GetComponentInChildren<WheelController>(true) != null)
                 { if (!StandstillDamper.Owned(a.gameObject)) a.gameObject.AddComponent<StandstillDamper>(); break; }
         }
     }
