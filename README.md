@@ -2,7 +2,9 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
-Version 1.2.1 lowers a lifted car's centre of mass by the lift (`LiftCenterOfMass`, 1 = the centre stays where it was with the body raised), so a tall car on big wheels does not flip in turns; the Rigidbody's automatic centre is re-read as parts change. Apocapatrol 2.3.1 applies the same rule to its template cars without this mod.
+Version 1.2.2 adds `StandstillDamping` (on): a car standing still gets extra angular damping, so a wide, lifted chassis on heavy wheels stops rocking itself side to side instead of shaking in place; `LiftCenterOfMass` is now on/off.
+
+Version 1.2.1 lowers a lifted car's centre of mass by the lift (`LiftCenterOfMass`), so a tall car on big wheels does not flip in turns; the Rigidbody's automatic centre is re-read as parts change. Apocapatrol 2.3.1 applies the same rule to its template cars without this mod.
 
 Version 1.2.0 requires a suspension lift kit on the vehicle to adjust the suspension: without one the width and height are standard and the hint says so; removing the kit returns an adjusted car to standard. It adds a public `PartAdjustment.SuspensionApi` (`Set`, `Get`, `KitFitted`) so other mods - Apocapatrol applies its car templates' suspension through it - keep their values in this mod's per-car save data. It also stops the car the player drives from vibrating with a raised suspension or big truck wheels: the wheel colliders (NWH's wheel mesh colliders and the game's wheel hub sphere, layer 2) collide with the driver, and once they reach into the cabin PhysX pushes the driver and the car apart every physics step. Collisions between the driver and the wheel colliders of their car are now ignored, re-checked twice a second.
 

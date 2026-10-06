@@ -194,7 +194,7 @@ namespace PartAdjustment
             foreach (var c in GetComponentsInChildren<Collider>(false)) if (c != null && c.enabled && !c.isTrigger) sig = sig * 31 + c.GetInstanceID();
             if (!force && sig == comSignature) return;
             comSignature = sig;
-            float lift = Mathf.Max(0f, -Height) * Mathf.Clamp(Plugin.LiftCenterOfMass.Value, 0f, 2f);
+            float lift = Plugin.LiftCenterOfMass.Value ? Mathf.Max(0f, -Height) : 0f;
             if (lift <= 0f) { if (comShifted) { body.ResetCenterOfMass(); comShifted = false; } return; }
             body.ResetCenterOfMass();
             var auto = body.centerOfMass;
