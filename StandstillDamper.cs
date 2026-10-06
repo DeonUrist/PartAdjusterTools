@@ -15,9 +15,9 @@ namespace PartAdjustment
     [ES3NonSerializable]
     public sealed class StandstillDamper : MonoBehaviour
     {
-        internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.35f;
+        internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.5f, DamperAtRest = 3f;
         private Rigidbody rb; private bool boosted;
-        private WheelController[] wheels = new WheelController[0]; private float[] baseStiffness = new float[0]; private float nextWheels;
+        private WheelController[] wheels = new WheelController[0]; private float[] baseStiffness = new float[0], baseBump = new float[0], baseRebound = new float[0]; private float nextWheels;
 
         internal static bool Owned(GameObject car)
         {
@@ -34,7 +34,14 @@ namespace PartAdjustment
             if (!boosted || Time.time >= nextWheels) Collect();
             boosted = true;
             for (int i = 0; i < wheels.Length; i++)
-                if (wheels[i] != null) wheels[i].LateralFrictionStiffness = Mathf.Lerp(baseStiffness[i], baseStiffness[i] * StiffnessAtRest, k);
+                if (wheels[i] == null) continue;
+                else
+                {
+                    // the roll-driving sideways grip goes down, the dampers that eat roll energy go up (the lift kit halves the vanilla rate)
+                    wheels[i].LateralFrictionStiffness = Mathf.Lerp(baseStiffness[i], baseStiffness[i] * StiffnessAtRest, k);
+                    wheels[i].DamperBumpRate = Mathf.Lerp(baseBump[i], baseBump[i] * DamperAtRest, k);
+                    wheels[i].DamperReboundRate = Mathf.Lerp(baseRebound[i], baseRebound[i] * DamperAtRest, k);
+                }
             // the roll / yaw rate is bled off directly: a fraction per step, the full fraction when standing
             rb.angularVelocity *= 1f - SpinBleed * k;
         }
@@ -47,11 +54,11 @@ namespace PartAdjustment
             if (boosted) Restore();
             var list = new List<WheelController>();
             foreach (var w in GetComponentsInChildren<WheelController>(true)) if (w != null && w.transform.parent == transform) list.Add(w);
-            wheels = list.ToArray(); baseStiffness = new float[wheels.Length];
-            for (int i = 0; i < wheels.Length; i++) baseStiffness[i] = wheels[i].LateralFrictionStiffness;
+            wheels = list.ToArray(); baseStiffness = new float[wheels.Length]; baseBump = new float[wheels.Length]; baseRebound = new float[wheels.Length];
+            for (int i = 0; i < wheels.Length; i++) { baseStiffness[i] = wheels[i].LateralFrictionStiffness; baseBump[i] = wheels[i].DamperBumpRate; baseRebound[i] = wheels[i].DamperReboundRate; }
         }
 
-        private void Restore() { for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null) wheels[i].LateralFrictionStiffness = baseStiffness[i]; }
+        private void Restore() { for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null) { wheels[i].LateralFrictionStiffness = baseStiffness[i]; wheels[i].DamperBumpRate = baseBump[i]; wheels[i].DamperReboundRate = baseRebound[i]; } }
         private void Release() { if (boosted) { Restore(); boosted = false; } }
         private void OnDisable() { if (rb != null) Release(); }
     }
