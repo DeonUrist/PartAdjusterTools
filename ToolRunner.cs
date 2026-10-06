@@ -89,8 +89,11 @@ namespace PartAdjustment
             var picked = toolOn ? Tool.FsmVariables.GetFsmGameObject("Hinge")?.Value : null;
             var hover = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
             bool suspension = Active != null || (hover != null && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag"));
+            var shown = Active ?? (hover != null ? hover.Adjustment : null);
+            hint.Override = shown != null && !shown.KitFitted ? "Fit a suspension lift kit to adjust the suspension" : null;
             hint.Show(suspension);
             if (Active == null || Time.timeScale <= 0f || !Application.isFocused || Cursor.lockState != CursorLockMode.Locked) return;
+            if (!Active.KitFitted) return;
             float width = (SuspensionControls.Pressed(SuspensionControls.Right) ? Plugin.WidthStep.Value : 0f)
                 - (SuspensionControls.Pressed(SuspensionControls.Left) ? Plugin.WidthStep.Value : 0f);
             float height = (SuspensionControls.Pressed(SuspensionControls.Up) ? Plugin.HeightStep.Value : 0f)

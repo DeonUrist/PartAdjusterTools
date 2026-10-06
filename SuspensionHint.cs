@@ -11,6 +11,7 @@ namespace PartAdjustment
         private Text label;
         private bool shown;
         private float nextFind;
+        internal string Override;   // 1.2.0: shown instead of the key hint (no lift kit on the car)
 
         internal void Show(bool value)
         {
@@ -59,7 +60,7 @@ namespace PartAdjustment
             }
             foreach (var graphic in originals.Keys) if (graphic != null && graphic.enabled) graphic.enabled = false;
             if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
-            var text = SuspensionControls.Hint;
+            var text = Override ?? SuspensionControls.Hint;
             if (label.text != text) label.text = text;
         }
 

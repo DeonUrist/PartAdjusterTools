@@ -132,9 +132,31 @@ namespace PartAdjustment
             else indicators?.Hide();
         }
 
+        // 1.2.0: the suspension can only be adjusted while a lift kit sits on hinge_suspension (the game's own checkSuspension looks at
+        // the same thing: GameObjectHasChildren). Without one the width and height are standard, and stay standard.
+        internal bool KitFitted
+        {
+            get
+            {
+                if (Hinge == null) return false;
+                for (int i = 0; i < Hinge.childCount; i++) if (Hinge.GetChild(i).CompareTag("vehPart")) return true;
+                return false;
+            }
+        }
+
+        // 1.2.0: another mod (Apocapatrol's car templates) sets the values; false when the car has no kit or is not supported
+        internal bool Set(float width, float height)
+        {
+            if (!Supported() || !KitFitted) return false;
+            Width = AdjustmentMath.Width(width);
+            Height = AdjustmentMath.Height(height, 1f);
+            Apply();
+            return true;
+        }
+
         internal void Change(float widthDelta, float heightDelta, bool reset)
         {
-            if (!Supported()) return;
+            if (!Supported() || !KitFitted) return;
             float width = reset ? 1f : AdjustmentMath.Width(Width + widthDelta);
             float height = reset ? 0f : heightDelta != 0f ? AdjustmentMath.Height(Height + heightDelta, Plugin.HeightLimit.Value) : Height;
             if (!reset && width == Width && height == Height) return;
@@ -146,6 +168,11 @@ namespace PartAdjustment
         internal void Apply()
         {
             if (!Supported()) return;
+            if (!KitFitted && (Width != 1f || Height != 0f))
+            {
+                Width = 1f; Height = 0f;
+                Plugin.Log.LogDebug("Suspension of " + name + " back to standard: no lift kit fitted.");
+            }
             model.localScale = new Vector3(modelScale.x * Width, modelScale.y, modelScale.z);
             model.localPosition = modelPosition + Vector3.up * Height;
             braces.ShowForWidth(Width);
@@ -212,6 +239,8 @@ namespace PartAdjustment
             mount.Baseline = wheel.localPosition;
             mount.Lifted = state == "lifted";
             RefreshCenters();
+            // the kit went on or came off (that is what moves the vanilla mounts): without a kit everything returns to standard
+            if (!KitFitted && (Width != 1f || Height != 0f)) { Apply(); return; }
             foreach (var m in mounts) ApplyMount(m);
         }
 
