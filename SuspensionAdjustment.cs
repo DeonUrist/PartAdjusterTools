@@ -30,6 +30,7 @@ namespace PartAdjustment
         private SuspensionWidthGeometry widthGeometry;
         private PlayMakerFSM attachment, suspensionCheck;
         private Rigidbody body;
+        private long comSignature; private float nextComCheck; private bool comShifted;
         private bool toolRequested, pickable;
         private bool ready;
 
@@ -179,7 +180,33 @@ namespace PartAdjustment
             // The lift kit/attachment trigger moves vertically with the assembly, but is never stretched.
             if (Hinge != null) Hinge.localPosition = hingePosition + Hinge.parent.InverseTransformVector(transform.TransformVector(Vector3.up * Height));
             foreach (var mount in mounts) ApplyMount(mount);
+            ApplyCenterOfMass(true);
             if (body != null) body.WakeUp();
+        }
+
+        // 1.2.1: a lifted body (Height < 0 = mounts down, body up) keeps its centre of mass where it was: the Rigidbody's automatic centre
+        // (nothing in the game or NWH sets one) lowered by LiftCenterOfMass x the lift. The automatic value is re-read first, so parts going
+        // on or off still move it, and re-checked once a second while the car's colliders change. Standard height = the automatic centre.
+        internal void ApplyCenterOfMass(bool force)
+        {
+            if (body == null) return;
+            long sig = 17;
+            foreach (var c in GetComponentsInChildren<Collider>(false)) if (c != null && c.enabled && !c.isTrigger) sig = sig * 31 + c.GetInstanceID();
+            if (!force && sig == comSignature) return;
+            comSignature = sig;
+            float lift = Mathf.Max(0f, -Height) * Mathf.Clamp(Plugin.LiftCenterOfMass.Value, 0f, 2f);
+            if (lift <= 0f) { if (comShifted) { body.ResetCenterOfMass(); comShifted = false; } return; }
+            body.ResetCenterOfMass();
+            var auto = body.centerOfMass;
+            body.centerOfMass = auto - Vector3.up * lift;
+            comShifted = true;
+        }
+
+        private void FixedUpdate()
+        {
+            if (!comShifted || Time.time < nextComCheck) return;
+            nextComCheck = Time.time + 1f;
+            ApplyCenterOfMass(false);
         }
 
         internal void WriteSaveVariables(FsmVariables variables)

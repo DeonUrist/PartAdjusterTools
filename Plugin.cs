@@ -7,13 +7,13 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.2.0")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.2.1")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<float> WidthStep, HeightStep, HeightLimit;
+        internal static ConfigEntry<float> WidthStep, HeightStep, HeightLimit, LiftCenterOfMass;
         internal static ConfigEntry<int> ReferenceFrame;
         internal static ConfigEntry<float> MovementStep, RotationAngle, FastMovementStep, FastRotationAngle;
         internal static ConfigEntry<KeyCode> ModifierKey, ModifierAlternative;
@@ -26,6 +26,7 @@ namespace PartAdjustment
             WidthStep = Config.Bind("Adjustment", "WidthStep", 0.025f, new ConfigDescription("Width multiplier changed per press of the game's Adjust left/right controls (range is always 1.0 to 1.5).", new AcceptableValueRange<float>(0.005f, 0.1f)));
             HeightStep = Config.Bind("Adjustment", "HeightStep", 0.025f, new ConfigDescription("Suspension and wheel mount movement in metres per press of the game's Adjust down/up controls.", new AcceptableValueRange<float>(0.005f, 0.1f)));
             HeightLimit = Config.Bind("Adjustment", "HeightLimit", 0.5f, new ConfigDescription("Maximum vertical offset in either direction, in metres, relative to the standard mounts.", new AcceptableValueRange<float>(0.05f, 1f)));
+            LiftCenterOfMass = Config.Bind("Adjustment", "LiftCenterOfMass", 1f, new ConfigDescription("A lifted suspension (body raised) lowers the car's centre of mass by this fraction of the lift, so a tall car on big wheels does not flip in turns. 1 = the centre stays where it was; 0 = off.", new AcceptableValueRange<float>(0f, 2f)));
             ReferenceFrame = Config.Bind("Items", "ReferenceFrame", 0, new ConfigDescription("0 = camera axes, including pitch and roll. 1 = world axes. Applies to item movement/rotation and held-item rotation while the adjustment tool is selected.", new AcceptableValueRange<int>(0, 1)));
             MovementStep = ItemStep("MovementStep", 0.01f, 0.001f, 1f, "Metres per item movement key press.");
             RotationAngle = ItemStep("RotationAngle", 1f, 0.1f, 90f, "Degrees per item rotation key press.");
