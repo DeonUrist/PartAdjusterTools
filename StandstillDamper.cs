@@ -16,7 +16,7 @@ namespace PartAdjustment
     public sealed class StandstillDamper : MonoBehaviour
     {
         internal const float StillSpeed = 0.6f, FreeSpeed = 1.2f, StiffnessAtRest = 0.25f, SpinBleed = 0.5f, DamperAtRest = 3f, HoldSpeed = 0.3f, UnholdSpeed = 0.5f;
-        private Rigidbody rb; private bool boosted, held; private RigidbodyConstraints baseConstraints;
+        private Rigidbody rb; private bool boosted, held, bumped; private RigidbodyConstraints baseConstraints;
         private WheelController[] wheels = new WheelController[0]; private float[] baseStiffness = new float[0], baseBump = new float[0], baseRebound = new float[0]; private float nextWheels;
 
         internal static bool Owned(GameObject car)
@@ -46,15 +46,25 @@ namespace PartAdjustment
             rb.angularVelocity *= 1f - SpinBleed * k;
             // parked (under 0.3 m/s): the body cannot roll or pitch at all - the roll <-> sideways-grip loop has nothing to work with. The
             // suspension still carries the car, sideways grip still holds it on a slope; released above 0.5 m/s (a push, the gas)
+            // The per-step probe showed the real thing: with the roll frozen the body still jittered 5 mm left-right EVERY physics step, the
+            // wheel loads swapping sides each step (5600 N / 0 / 5600 N / 0...). NWH's lateral friction at (near) zero speed is bang-bang: the
+            // full load x grip against whatever sideways velocity exists, and with 0.52 m wheels carrying 5000 N that impulse (100 N s on a
+            // 600 kg car) reverses the sideways velocity every step instead of killing it. So a parked car is also frozen in place
+            // horizontally (X/Z position) - no sideways velocity, no lateral force, nothing to flip - while the suspension keeps working
+            // vertically. Released when the engine drives a wheel (motor torque), when something hits the car, or when it moves anyway.
             float speed = rb.velocity.magnitude;
-            if (!held && speed < HoldSpeed)
+            bool driving = false;
+            for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null && Mathf.Abs(wheels[i].MotorTorque) > 30f) { driving = true; break; }
+            if (!held && speed < HoldSpeed && !driving)
             {
                 baseConstraints = rb.constraints;
-                rb.constraints = baseConstraints | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                rb.constraints = baseConstraints | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
                 rb.angularVelocity = Vector3.zero;
+                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
                 held = true;
             }
-            else if (held && speed > UnholdSpeed) Unhold();
+            else if (held && (speed > UnholdSpeed || driving || bumped)) Unhold();
+            bumped = false;
         }
 
         // the wheels (direct hinge_wheel_* children) and their vanilla lateral stiffness - re-read every 2 s while active (a wheel put on or
@@ -70,6 +80,7 @@ namespace PartAdjustment
         }
 
         private void Restore() { for (int i = 0; i < wheels.Length; i++) if (wheels[i] != null) { wheels[i].LateralFrictionStiffness = baseStiffness[i]; wheels[i].DamperBumpRate = baseBump[i]; wheels[i].DamperReboundRate = baseRebound[i]; } }
+        private void OnCollisionEnter(Collision col) { if (col.impulse.magnitude > 50f) bumped = true; }   // rammed, shot off its wheels...
         private void Unhold() { if (held) { rb.constraints = baseConstraints; held = false; } }
         private void Release() { Unhold(); if (boosted) { Restore(); boosted = false; } }
         private void OnDisable() { if (rb != null) Release(); }
