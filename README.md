@@ -2,7 +2,7 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
-Version 1.3.0 settles the shaking car. With big truck wheels on a widened, lifted chassis the game's tyre model (NWH) reverses the car's sideways motion every physics step while it stands still, the wheel loads swapping sides fifty times a second (measured with a per-step probe); no tyre or suspension parameter stops it safely. `StandstillDamping` (on) therefore holds a parked car still: below 0.3 m/s with no engine torque on the wheels, its horizontal position and roll/pitch are frozen, the suspension keeps working vertically, and the hold releases when the engine drives a wheel, when something hits the car or when it moves above 0.5 m/s. Apocapatrol 2.4.0 has the same hold for its raider cars; whichever mod reaches a car first owns it.
+Version 1.4.0 withdraws the 1.3.0 parking hold (it left some cars unable to move) and the 1.2.0 driver/wheel-collider rule: the mod no longer touches a car's physics or wheels. The one stability rule left is the centre of mass (`LiftCenterOfMass`, on/off): a car with a suspension lift kit carries it 0.3 m lower, plus 1.5 x any extra lift of the body, so a tall car on big wheels does not flip in turns. Apocapatrol 2.5.0 applies the same rule to its raider cars.
 
 Version 1.2.1 lowers a lifted car's centre of mass by the lift (`LiftCenterOfMass`, on/off), so a tall car on big wheels does not flip in turns; the Rigidbody's automatic centre is re-read as parts change. Apocapatrol applies the same rule to its template cars without this mod.
 

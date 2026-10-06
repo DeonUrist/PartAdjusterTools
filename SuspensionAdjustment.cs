@@ -184,27 +184,31 @@ namespace PartAdjustment
             if (body != null) body.WakeUp();
         }
 
-        // 1.2.1: a lifted body (Height < 0 = mounts down, body up) keeps its centre of mass where it was: the Rigidbody's automatic centre
-        // (nothing in the game or NWH sets one) lowered by LiftCenterOfMass x the lift. The automatic value is re-read first, so parts going
-        // on or off still move it, and re-checked once a second while the car's colliders change. Standard height = the automatic centre.
+        // 1.4.0: a car with a lift kit carries its weight lower. The Rigidbody's automatic centre of mass (nothing in the game or NWH sets one)
+        // is lowered by KitDrop as soon as a kit sits on hinge_suspension, plus LiftFactor x any extra lift of the body (Height < 0), so a
+        // tall car on big wheels does not flip in turns. The automatic value is re-read first (parts going on or off still move it) and
+        // re-checked once a second. Apocapatrol applies the same constants to its raider cars; without a kit the centre is the automatic one.
+        internal const float KitDrop = 0.3f, LiftFactor = 1.5f;
+
         internal void ApplyCenterOfMass(bool force)
         {
             if (body == null) return;
-            long sig = 17;
+            bool kit = Hinge != null && KitFitted;
+            long sig = kit ? 19 : 17;
+            sig = sig * 31 + (long)(Height * 1000f);
             foreach (var c in GetComponentsInChildren<Collider>(false)) if (c != null && c.enabled && !c.isTrigger) sig = sig * 31 + c.GetInstanceID();
             if (!force && sig == comSignature) return;
             comSignature = sig;
-            float lift = Plugin.LiftCenterOfMass.Value ? Mathf.Max(0f, -Height) : 0f;
-            if (lift <= 0f) { if (comShifted) { body.ResetCenterOfMass(); comShifted = false; } return; }
+            float drop = Plugin.LiftCenterOfMass.Value && kit ? KitDrop + LiftFactor * Mathf.Max(0f, -Height) : 0f;
+            if (drop <= 0f) { if (comShifted) { body.ResetCenterOfMass(); comShifted = false; } return; }
             body.ResetCenterOfMass();
-            var auto = body.centerOfMass;
-            body.centerOfMass = auto - Vector3.up * lift;
+            body.centerOfMass = body.centerOfMass - Vector3.up * drop;
             comShifted = true;
         }
 
         private void FixedUpdate()
         {
-            if (!comShifted || Time.time < nextComCheck) return;
+            if (Time.time < nextComCheck) return;
             nextComCheck = Time.time + 1f;
             ApplyCenterOfMass(false);
         }
