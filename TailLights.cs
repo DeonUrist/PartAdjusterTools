@@ -159,33 +159,12 @@ namespace PartAdjustment
             return false;
         }
 
-        private static readonly HashSet<string> described = new HashSet<string>();
-
-        // The red beam: TailLightBeam x the headlight beam's strength (red carries about a third of white's brightness), TailLightReach
-        // metres, TailLightShadows off by default (shadow-casting spots made the ground darker where two tail light beams crossed).
-        // Live tail lights are tracked so a settings change applies at once.
-        private static readonly HashSet<GameObject> live = new HashSet<GameObject>();
-        internal static void BeamChanged()
-        {
-            live.RemoveWhere(g => g == null);
-            foreach (var go in live) ApplyLights(go);
-            var any = live.FirstOrDefault(g => g.activeInHierarchy);
-            var body = any == null ? null : any.GetComponentInParent<Rigidbody>();
-            if (body != null) LightProbe.Request(body.transform);
-        }
-
-        internal static bool HasTail(Transform car)
-        {
-            foreach (var fsm in car.GetComponentsInChildren<PlayMakerFSM>())
-                if (fsm.FsmName == "Headlight" && IsTail(fsm.gameObject)) return true;
-            return false;
-        }
+        // The red beam (values tuned in game by Denis, 2026-10-09): half the headlight beam's strength, 25 m, no shadows.
+        private const float BeamStrength = 0.5f, BeamReach = 25f;
 
         private static void ApplyLights(GameObject go)
         {
-            if (go.scene.IsValid() && go.activeInHierarchy) live.Add(go);
             RecolorBeams(go);
-            Describe(go);
             if (!baseLight.ContainsKey(Variant(go.name))) ScanPrefabs();
             baseLight.TryGetValue(Variant(go.name), out var lights);
             foreach (var light in go.GetComponentsInChildren<Light>(true))
@@ -195,16 +174,13 @@ namespace PartAdjustment
                 if (lights != null && lights.TryGetValue(light.name, out var b))
                 {
                     // Point = the lens glow (child "Light", range 0.1 m: it only lights the lens itself) - full reach, a bit stronger
-                    // because red carries less brightness. Spot = the beam - same strength, shorter throw (a tail light, not a lamp).
+                    // because red carries less brightness. Spot = the red beam.
                     if (light.type == LightType.Point) { light.intensity = b.x * 1.6f; light.range = b.y; }
                     else
                     {
-                        light.intensity = b.x * Plugin.TailLightBeam.Value;
-                        light.range = Mathf.Min(b.y, Plugin.TailLightReach.Value);
-                        light.shadows = Plugin.TailLightShadows.Value ? LightShadows.Soft : LightShadows.None;
-                        // Forward rendering lights only the N most important lights per object per pixel (QualitySettings.pixelLightCount);
-                        // the rest fall back to per-vertex / spherical harmonics - on a terrain that is a coarse, wrong-looking patch.
-                        light.renderMode = Plugin.TailLightPixel.Value ? LightRenderMode.ForcePixel : LightRenderMode.Auto;
+                        light.intensity = b.x * BeamStrength;
+                        light.range = Mathf.Min(b.y, BeamReach);
+                        light.shadows = LightShadows.None;
                     }
                 }
             }
@@ -236,28 +212,6 @@ namespace PartAdjustment
         {
             float v = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
             return new Color(v * LightColor.r, v * LightColor.g, v * LightColor.b, c.a);
-        }
-
-        // Once per model: what the lit part is made of (for the log, in case a model needs special handling).
-        private static void Describe(GameObject go)
-        {
-            var variant = Variant(go.name);
-            if (!described.Add(variant)) return;
-            var sb = new System.Text.StringBuilder("Tail light" + variant + " lit part:");
-            foreach (var t in go.GetComponentsInChildren<Transform>(true))
-            {
-                if (!InLight(t, go.transform)) continue;
-                sb.Append(" [").Append(t.name).Append(t.gameObject.activeSelf ? "" : " (off)").Append(':');
-                foreach (var c in t.GetComponents<Component>())
-                {
-                    if (c == null || c is Transform) continue;
-                    sb.Append(' ').Append(c.GetType().Name);
-                    if (c is Light l) sb.Append("(").Append(l.type).Append(" i=").Append(l.intensity.ToString("0.##")).Append(" r=").Append(l.range.ToString("0.#")).Append(")");
-                    if (c is Renderer r && r.sharedMaterial != null) sb.Append("(").Append(r.sharedMaterial.shader.name).Append(")");
-                }
-                sb.Append(']');
-            }
-            Plugin.Log.LogInfo(sb.ToString());
         }
 
         // The item's ItemName FSM writes the literal "Headlight" into the look-at label; say "Tail Light" for ours.
@@ -310,7 +264,6 @@ namespace PartAdjustment
         internal static void SceneLoaded() { due = Time.frameCount + 3; tries = 0; }
         private void Update()
         {
-            LightProbe.Tick();
             if (due < 0 || Time.frameCount < due || Time.unscaledTime < retryAt) return;
             if (TailLights.EnsureTemplates() || ++tries >= 4) { due = -1; return; }
             retryAt = Time.unscaledTime + 5f;   // the prefab may load a little later; a few cheap retries per scene

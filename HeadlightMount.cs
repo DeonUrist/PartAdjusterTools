@@ -61,10 +61,10 @@ namespace PartAdjustment
             var held = ItemRoot(grab.FsmVariables.GetFsmGameObject("Item")?.Value);
             if (held == null || !IsHeadlight(held) || held.CompareTag("vehPart")) { ReleaseText(); return; }
             bool press = Controls.Pressed(Controls.Use);
-            if (ToolBusy(adjustTool)) { Refused(press, held, "the tool points at a part hinge (" + adjustTool.ActiveStateName + ")"); return; }
-            if (!Find(camera, held, out var parent, out var point, out var normal, out var car, out var why)) { Refused(press, held, why); return; }
+            if (ToolBusy(adjustTool)) { ReleaseText(); return; }
+            if (!Find(camera, held, out var parent, out var point, out var normal, out var car)) { ReleaseText(); return; }
             // Aiming at a free headlight slot that already offers this item: the vanilla slot attach takes the press.
-            if (SlotOffered(car, held, point)) { Refused(press, held, "a free headlight slot right there takes it"); return; }
+            if (SlotOffered(car, held, point)) { ReleaseText(); return; }
             Ready = true;
             ShowText("Attach " + Label(held) + ": " + Controls.Keys(Controls.Use));
             if (!press) return;
@@ -74,20 +74,15 @@ namespace PartAdjustment
             ReleaseText();
         }
 
-        private static void Refused(bool press, GameObject held, string why)
-        {
-            ReleaseText();
-            if (press) Plugin.Log.LogInfo("Headlight mount: " + held.name + " not attached - " + why);
-        }
 
         // Called every LateUpdate: anything that did not run Update this frame is not offering an attach.
         internal static void LateCheck() { if (touchedFrame != Time.frameCount && (Ready || shownText != null)) Clear(); }
         internal static void Clear() { Ready = false; ReleaseText(); }
         internal static void SceneChanged() { Clear(); uiText = null; clip = null; vehicles.Clear(); hinges.Clear(); }
 
-        private static bool Find(Camera camera, GameObject held, out Transform parent, out Vector3 point, out Vector3 normal, out Transform car, out string why)
+        private static bool Find(Camera camera, GameObject held, out Transform parent, out Vector3 point, out Vector3 normal, out Transform car)
         {
-            parent = car = null; point = normal = Vector3.zero; why = "nothing within " + Reach + " m";
+            parent = car = null; point = normal = Vector3.zero;
             var ray = camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             var hits = Physics.RaycastAll(ray, Reach, BodyMask, QueryTriggerInteraction.Ignore);
             if (hits.Length == 0) return false;
@@ -97,10 +92,10 @@ namespace PartAdjustment
                 if (hit.collider == null || hit.collider.transform.IsChildOf(held.transform)) continue;
                 // Only the first thing behind the held item counts: a wall in front of the car blocks the attach.
                 var body = hit.collider.attachedRigidbody;
-                if (body == null || !IsVehicle(body.transform)) { why = "aimed at " + Path(hit.collider.transform) + ", not a car body"; return false; }
+                if (body == null || !IsVehicle(body.transform)) return false;
                 car = body.transform;
                 parent = MountFor(hit.collider.transform, car);
-                if (parent == null) { why = "aimed at a wheel (" + Path(hit.collider.transform) + ")"; return false; }
+                if (parent == null) return false;
                 point = hit.point; normal = hit.normal;
                 return true;
             }
@@ -221,7 +216,6 @@ namespace PartAdjustment
             var light = AdjustmentRunner.Find(held, "Headlight");
             if (light != null) light.SendEvent(LightsOn(car) ? "HeadlightsON" : "HeadlightsOFF");
             PlayWrench(adjustTool, position);
-            Plugin.Log.LogInfo("Attached " + held.name + " to " + Path(parent));
         }
 
         internal static void Detach(GameObject light, PlayMakerFSM adjustTool)
@@ -275,12 +269,6 @@ namespace PartAdjustment
             shownText = null;
         }
 
-        private static string Path(Transform t)
-        {
-            var s = t.name;
-            for (var p = t.parent; p != null; p = p.parent) s = p.name + "/" + s;
-            return s;
-        }
     }
 }
 
@@ -302,7 +290,6 @@ namespace PartAdjustment
             {
                 var body = __instance.Owner == null ? null : __instance.Owner.GetComponentInParent<UnityEngine.Rigidbody>();
                 if (body != null) HeadlightMount.SwitchLights(body.transform, evt);
-                if (body != null && evt == "HeadlightsON" && TailLights.HasTail(body.transform)) LightProbe.Request(body.transform);
             }
             catch (System.Exception e) { Plugin.Log.LogError("Headlight switch: " + e); }
         }

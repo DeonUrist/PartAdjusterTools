@@ -2,27 +2,11 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
-Version 1.5.8: `[Headlights] TailLightPixel` (on) keeps the tail light's red light per-pixel even with many lights around (forward rendering otherwise lights extra lights per vertex, which looks patchy on the ground); a light report is written to the log when a car with tail lights switches its lights on (investigating darker ground where two tail lights overlap).
+Version 1.6.0 adds free headlight mounting, red tail lights and a put-away key for tools.
 
-Version 1.5.7: the tail light settings are back for tuning - `[Headlights] TailLightBeam` (3, strength vs a headlight beam), `TailLightReach` (4 m), `TailLightShadows` (off), all applied at once. Use (F) during an E adjustment now only removes the light you aim at: putting the tool away at the toolbox no longer drops the light being adjusted; ending an adjustment any way keeps its pose.
-
-Version 1.5.6: the tail light's red light is a short glow on the ground right behind the lamp (4 m, 3x a headlight beam's strength, no shadows, so two crossing tail lights no longer darken the ground); the TailLightBeam / TailLightReach settings are gone (fixed values).
-
-Version 1.5.5: the red light reaches 32 m instead of 80 m (40 %), set by `[Headlights] TailLightReach` (2-200 m, applies at once); strength stays `TailLightBeam`.
-
-Version 1.5.4: the tail light's red beam lights up the ground and objects behind the car - 3x the headlight beam's strength (setting `[Headlights] TailLightBeam`, 0-8, applies at once) up to 80 m.
-
-Version 1.5.3: the tail light's lens glow (a 0.1 m point light inside the lens) keeps its full reach and is a bit stronger - 1.5.2 shortened it to 0.07 m so the lens never lit; the red beam throws 20 % as far as a headlight.
-
-Version 1.5.2: tail lights switch on visibly - the lit part of the light (beam/glow) keeps its brightness and turns red instead of being darkened, the red light keeps the headlight's strength.
-
-Version 1.5.1: every headlight model (Headlight, Headlight 2, Headlight 3) has its tail light (`tail_light`, `tail_light_2`, `tail_light_3`, "Tail Light", "Tail Light 2", "Tail Light 3" in Apocaspawner and world loot); freely mounted lights follow the car's light switch (and match it when mounted); a headlight slot only takes the press when you aim at the slot itself, and a slot that stayed "ready" after the light left it no longer blocks or later steals a mounted light. A refused mount is logged with the reason.
-
-Version 1.5.0 adds free headlight mounting, red tail lights and a put-away key for tools.
-
-- **Headlights anywhere (Part Adjustment tool selected).** Hold a headlight or tail light, aim at any part of a car body within reach and press Use (normally F): it is attached there, flush on the aimed surface (or exactly where you hold it if it already touches the body). Use on an attached headlight / tail light removes it again. Without the tool, headlights only fit the car's headlight slots as before, and a free slot that already offers the held light keeps priority. Freely mounted lights are ordinary attached parts: the utility tool (wrench) removes them, they are saved with the car, they move with the body part they sit on and they switch on with the car's lights.
-- **E adjustment for lights.** With the tool selected, secondary Use (normally E) on an attached headlight or tail light - in a slot or mounted freely - starts the same move/rotate session as for plates, crates and gauges.
-- **Tail lights.** A red version of the headlight (red lens and housing tint, red light). Headlights spawned in wrecks, caves and merchant stock are tail lights at `TailLightChance` percent (default 8). Apocaspawner lists them as "Tail Light" under Vehicle Parts without any change to Apocaspawner. A tail light is the game's own headlight item named `tail_light(Clone)N`; the save stores it as a headlight and the mod restores the red look when it loads. Without the mod a tail light simply becomes a normal headlight again.
+- **Headlights anywhere (Part Adjustment tool selected).** Hold a headlight or tail light, aim at any part of a car body within reach and press Use (normally F): it is attached there, flush on the aimed surface (or exactly where you hold it if it already touches the body). Use on an attached headlight / tail light you aim at removes it again. Without the tool, headlights only fit the car's headlight slots as before; aiming at a free headlight slot with the light still uses the slot. Freely mounted lights are ordinary attached parts: the utility tool (wrench) removes them, they are saved with the car, they move with the body part they sit on, and they switch on and off with the car's light switch.
+- **E adjustment for lights.** With the tool selected, secondary Use (normally E) on an attached headlight or tail light - in a slot or mounted freely - starts the same move/rotate session as for plates, crates and gauges. However the session ends (E, putting the tool away, F elsewhere), the light stays where you left it.
+- **Tail lights.** A red version of each of the game's three headlights ("Tail Light", "Tail Light 2", "Tail Light 3"): red housing and lens, a red glow when switched on and a red light on the ground behind it. Headlights found in wrecks, caves and merchant stock are tail lights at `TailLightChance` percent (default 8). Apocaspawner lists them under Vehicle Parts. A tail light is the game's own headlight item named `tail_light(Clone)N` (`tail_light_2`, `tail_light_3`); the save stores it as a headlight and the mod restores the red look on load. Without the mod a tail light simply becomes a normal headlight again.
 - **Put away tools with X.** `PutAwayKey` (default X) puts away the utility tool, the repair tool or the Part Adjustment tool through the game's own put-away step, as if you used the toolbox again. `PutAwayWithKey` switches it off.
 
 Version 1.4.0 withdraws the 1.3.0 parking hold (it left some cars unable to move) and the 1.2.0 driver/wheel-collider rule: the mod no longer touches a car's physics or wheels. The one stability rule left is the centre of mass (`LiftCenterOfMass`, on/off): a car with a suspension lift kit carries it 0.3 m lower, plus 1.5 x any extra lift of the body, so a tall car on big wheels does not flip in turns. Apocapatrol 2.5.0 applies the same rule to its raider cars.
@@ -89,13 +73,13 @@ Existing saves do not require a new game. Unsupported vehicles ignore old adjust
 
 ## Installation and settings
 
-Download `PartAdjusterTools-1.1.0.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
+Download `PartAdjustment-1.6.0.zip` from [Releases](https://github.com/DeonUrist/PartAdjusterTools/releases/latest) and extract it into your game's `BepInEx/plugins` folder. It creates `BepInEx/plugins/PartAdjustment/PartAdjustment.dll` and `icon.png`. When updating, replace the existing DLL; keep only one installed copy. The release also includes the DLL and PNG separately for manual installation.
 
 Restart the game after installing. BepInEx creates `BepInEx/config/com.denis.apocalypter.partadjustment.cfg` on first load. Apocasetter discovers the plugin through its normal `Apocasetter = true` opt-in; no other mod is required.
 
 Keep `icon.png` beside `PartAdjustment.dll` in the mod's own folder; Apocasetter automatically discovers it there, with no extra registration. For a DLL installed directly in `BepInEx/plugins`, rename the PNG to `PartAdjustment.png` beside that DLL. The icon is copied to `bin/Release` when building. Restart after adding it because Apocasetter caches icons for the session.
 
-Settings added in 1.5.0: `[Headlights] AttachAnywhere` (true), `[Headlights] TailLightChance` (8, 0-100), `[Tools] PutAwayWithKey` (true), `[Tools] PutAwayKey` (X). `AttachAnywhere` also needs `Enabled`.
+Settings added in 1.6.0: `[Headlights] AttachAnywhere` (true), `[Headlights] TailLightChance` (8, 0-100), `[Tools] PutAwayWithKey` (true), `[Tools] PutAwayKey` (X). `AttachAnywhere` also needs `Enabled`.
 
 Defaults: width step 0.025, height step 0.025 metres and height limit ±0.5 metres. Settings can be changed through Apocasetter or the config file. Turning Enabled off stops selection/input and preserves existing vehicle adjustments. Input is ignored while paused, unfocused or with the cursor unlocked.
 
