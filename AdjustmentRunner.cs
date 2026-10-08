@@ -103,9 +103,10 @@ namespace PartAdjustment
             var hit = ActionHelpers.MousePick(2f, mask);
             if (hit.collider != null && hit.distance <= 2f) Hover = FreeAttachment(hit.collider.transform);
 
-            // Use (F) with the tool removes the attached headlight / tail light under the cursor (or being adjusted),
-            // the same de_Attach the utility wrench sends. The vanilla tool keeps the press while it points at a hinge.
-            var removable = Session != null ? Session.Target : Hover;
+            // Use (F) with the tool removes the attached headlight / tail light under the cursor, the same de_Attach the utility
+            // wrench sends. Only the aimed one: F on the toolbox (putting the tool away) during an E session must not pull the
+            // adjusted light off (1.5.6 did). The vanilla tool keeps the press while it points at a hinge.
+            var removable = Hover;
             HoverRemovable = Plugin.AttachAnywhere.Value && removable != null && !HeadlightMount.ToolBusy(adjustTool)
                 && removable.CompareTag("vehPart") && HeadlightMount.IsHeadlight(removable.gameObject);
             if (HoverRemovable && Controls.Pressed(Controls.Use))

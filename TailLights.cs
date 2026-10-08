@@ -160,13 +160,19 @@ namespace PartAdjustment
 
         private static readonly HashSet<string> described = new HashSet<string>();
 
-        // The red beam (Denis, 1.5.6): headlight beam strength x3 (red carries about a third of white's brightness), only a few
-        // metres of reach - a red glow on the ground right behind the car - and no shadows: shadow-casting spots made the ground
-        // darker, not brighter, where two tail light beams crossed.
-        private const float BeamStrength = 3f, BeamReach = 4f;
+        // The red beam: TailLightBeam x the headlight beam's strength (red carries about a third of white's brightness), TailLightReach
+        // metres, TailLightShadows off by default (shadow-casting spots made the ground darker where two tail light beams crossed).
+        // Live tail lights are tracked so a settings change applies at once.
+        private static readonly HashSet<GameObject> live = new HashSet<GameObject>();
+        internal static void BeamChanged()
+        {
+            live.RemoveWhere(g => g == null);
+            foreach (var go in live) ApplyLights(go);
+        }
 
         private static void ApplyLights(GameObject go)
         {
+            if (go.scene.IsValid() && go.activeInHierarchy) live.Add(go);
             RecolorBeams(go);
             Describe(go);
             if (!baseLight.ContainsKey(Variant(go.name))) ScanPrefabs();
@@ -180,7 +186,12 @@ namespace PartAdjustment
                     // Point = the lens glow (child "Light", range 0.1 m: it only lights the lens itself) - full reach, a bit stronger
                     // because red carries less brightness. Spot = the beam - same strength, shorter throw (a tail light, not a lamp).
                     if (light.type == LightType.Point) { light.intensity = b.x * 1.6f; light.range = b.y; }
-                    else { light.intensity = b.x * BeamStrength; light.range = Mathf.Min(b.y, BeamReach); light.shadows = LightShadows.None; }
+                    else
+                    {
+                        light.intensity = b.x * Plugin.TailLightBeam.Value;
+                        light.range = Mathf.Min(b.y, Plugin.TailLightReach.Value);
+                        light.shadows = Plugin.TailLightShadows.Value ? LightShadows.Soft : LightShadows.None;
+                    }
                 }
             }
         }
