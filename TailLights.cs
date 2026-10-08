@@ -18,7 +18,7 @@ namespace PartAdjustment
         internal const string Key = "tail_light";
         private const string Base = "Headlight";
         private static readonly Color Tint = new Color(1f, 0.13f, 0.09f);
-        private static readonly Color LightColor = new Color(1f, 0.07f, 0.04f);
+        private static readonly Color LightColor = new Color(1f, 0.1f, 0.05f);
         private static readonly Dictionary<string, GameObject> prefabs = new Dictionary<string, GameObject>();
         private static readonly Dictionary<string, GameObject> templates = new Dictionary<string, GameObject>();
         private static readonly Dictionary<Material, Material> redOf = new Dictionary<Material, Material>();
@@ -160,8 +160,17 @@ namespace PartAdjustment
 
         private static readonly HashSet<string> described = new HashSet<string>();
 
+        // Live tail lights, so a TailLightBeam change applies at once.
+        private static readonly HashSet<GameObject> live = new HashSet<GameObject>();
+        internal static void BeamChanged()
+        {
+            live.RemoveWhere(g => g == null);
+            foreach (var go in live) ApplyLights(go);
+        }
+
         private static void ApplyLights(GameObject go)
         {
+            if (go.scene.IsValid() && go.activeInHierarchy) live.Add(go);
             RecolorBeams(go);
             Describe(go);
             if (!baseLight.ContainsKey(Variant(go.name))) ScanPrefabs();
@@ -174,8 +183,9 @@ namespace PartAdjustment
                 {
                     // Point = the lens glow (child "Light", range 0.1 m: it only lights the lens itself) - full reach, a bit stronger
                     // because red carries less brightness. Spot = the beam - same strength, shorter throw (a tail light, not a lamp).
+                    // The beam is red, which carries about a third of white's brightness: TailLightBeam (default 3) makes up for it.
                     if (light.type == LightType.Point) { light.intensity = b.x * 1.6f; light.range = b.y; }
-                    else { light.intensity = b.x; light.range = b.y * 0.2f; }
+                    else { light.intensity = b.x * Plugin.TailLightBeam.Value; light.range = Mathf.Min(b.y, 80f); }
                 }
             }
         }

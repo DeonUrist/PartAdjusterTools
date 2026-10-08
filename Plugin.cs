@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.5.3")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.5.4")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";
@@ -20,6 +20,7 @@ namespace PartAdjustment
         internal static ConfigEntry<KeyCode> ModifierKey, ModifierAlternative;
         internal static ConfigEntry<bool> AttachAnywhere, PutAwayWithKey;
         internal static ConfigEntry<int> TailLightChance;
+        internal static ConfigEntry<float> TailLightBeam;
         internal static ConfigEntry<KeyCode> PutAwayKey;
         private static GameObject runner;
         private void Awake()
@@ -40,6 +41,8 @@ namespace PartAdjustment
             ModifierAlternative = Config.Bind("Items", "ModifierAlternative", KeyCode.None, "Optional alternative fast-step modifier. Item toggle and Adjust controls use the game's primary/alternate bindings.");
             AttachAnywhere = Config.Bind("Headlights", "AttachAnywhere", true, "With the Part Adjustment tool selected, a held headlight or tail light attaches anywhere on a car body (Use, normally F) and Use removes attached ones. Without the tool they only fit headlight slots; the utility tool removes them as usual.");
             TailLightChance = Config.Bind("Headlights", "TailLightChance", 8, new ConfigDescription("Chance in percent that a headlight spawned in the world (wrecks, caves, merchants) is a red tail light instead.", new AcceptableValueRange<int>(0, 100)));
+            TailLightBeam = Config.Bind("Headlights", "TailLightBeam", 3f, new ConfigDescription("Strength of a tail light's red light on the ground and objects around it, relative to a headlight's beam (red looks about three times weaker than white at the same strength).", new AcceptableValueRange<float>(0f, 8f)));
+            TailLightBeam.SettingChanged += (s, e) => TailLights.BeamChanged();
             PutAwayWithKey = Config.Bind("Tools", "PutAwayWithKey", true, "Put away the utility, repair or Part Adjustment tool with PutAwayKey instead of walking back to the toolbox.");
             PutAwayKey = Config.Bind("Tools", "PutAwayKey", KeyCode.X, "Key that puts away the tool in your hands.");
             new Harmony(Guid).PatchAll(typeof(Plugin).Assembly);
