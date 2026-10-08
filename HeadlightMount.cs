@@ -35,6 +35,14 @@ namespace PartAdjustment
             return false;
         }
 
+        // GrabItem's Item is the picked collider's object; the item is the nearest object carrying an ID FSM.
+        private static GameObject ItemRoot(GameObject go)
+        {
+            for (var t = go == null ? null : go.transform; t != null; t = t.parent)
+                if (AdjustmentRunner.Find(t.gameObject, "ID") != null) return t.gameObject;
+            return go;
+        }
+
         internal static string Label(GameObject go) => TailLights.IsTail(go) ? "Tail Light" : "Headlight";
 
         // The vanilla tool owns the frame while it points at a hinge wrench or adjusts one.
@@ -49,19 +57,27 @@ namespace PartAdjustment
         {
             touchedFrame = Time.frameCount;
             Ready = false;
-            if (!Plugin.AttachAnywhere.Value || grab == null || camera == null || grab.ActiveStateName != "ItemInHand" || ToolBusy(adjustTool)) { ReleaseText(); return; }
-            var held = grab.FsmVariables.GetFsmGameObject("Item")?.Value;
+            if (!Plugin.AttachAnywhere.Value || grab == null || camera == null || grab.ActiveStateName != "ItemInHand") { ReleaseText(); return; }
+            var held = ItemRoot(grab.FsmVariables.GetFsmGameObject("Item")?.Value);
             if (held == null || !IsHeadlight(held) || held.CompareTag("vehPart")) { ReleaseText(); return; }
-            if (!Find(camera, held, out var parent, out var point, out var normal, out var car)) { ReleaseText(); return; }
-            // A free headlight slot already offers this item: the vanilla slot attach takes the press.
-            if (SlotOffered(car, held)) { ReleaseText(); return; }
+            bool press = Controls.Pressed(Controls.Use);
+            if (ToolBusy(adjustTool)) { Refused(press, held, "the tool points at a part hinge (" + adjustTool.ActiveStateName + ")"); return; }
+            if (!Find(camera, held, out var parent, out var point, out var normal, out var car, out var why)) { Refused(press, held, why); return; }
+            // Aiming at a free headlight slot that already offers this item: the vanilla slot attach takes the press.
+            if (SlotOffered(car, held, point)) { Refused(press, held, "a free headlight slot right there takes it"); return; }
             Ready = true;
             ShowText("Attach " + Label(held) + ": " + Controls.Keys(Controls.Use));
-            if (!Controls.Pressed(Controls.Use)) return;
+            if (!press) return;
             ConsumedUseFrame = Time.frameCount;
-            Attach(grab, adjustTool, held, parent, point, normal);
+            Attach(grab, adjustTool, held, parent, point, normal, car);
             Ready = false;
             ReleaseText();
+        }
+
+        private static void Refused(bool press, GameObject held, string why)
+        {
+            ReleaseText();
+            if (press) Plugin.Log.LogInfo("Headlight mount: " + held.name + " not attached - " + why);
         }
 
         // Called every LateUpdate: anything that did not run Update this frame is not offering an attach.
@@ -69,9 +85,9 @@ namespace PartAdjustment
         internal static void Clear() { Ready = false; ReleaseText(); }
         internal static void SceneChanged() { Clear(); uiText = null; clip = null; vehicles.Clear(); hinges.Clear(); }
 
-        private static bool Find(Camera camera, GameObject held, out Transform parent, out Vector3 point, out Vector3 normal, out Transform car)
+        private static bool Find(Camera camera, GameObject held, out Transform parent, out Vector3 point, out Vector3 normal, out Transform car, out string why)
         {
-            parent = car = null; point = normal = Vector3.zero;
+            parent = car = null; point = normal = Vector3.zero; why = "nothing within " + Reach + " m";
             var ray = camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             var hits = Physics.RaycastAll(ray, Reach, BodyMask, QueryTriggerInteraction.Ignore);
             if (hits.Length == 0) return false;
@@ -81,10 +97,10 @@ namespace PartAdjustment
                 if (hit.collider == null || hit.collider.transform.IsChildOf(held.transform)) continue;
                 // Only the first thing behind the held item counts: a wall in front of the car blocks the attach.
                 var body = hit.collider.attachedRigidbody;
-                if (body == null || !IsVehicle(body.transform)) return false;
+                if (body == null || !IsVehicle(body.transform)) { why = "aimed at " + Path(hit.collider.transform) + ", not a car body"; return false; }
                 car = body.transform;
                 parent = MountFor(hit.collider.transform, car);
-                if (parent == null) return false;
+                if (parent == null) { why = "aimed at a wheel (" + Path(hit.collider.transform) + ")"; return false; }
                 point = hit.point; normal = hit.normal;
                 return true;
             }
@@ -126,7 +142,7 @@ namespace PartAdjustment
             return min > 0f && max / min < 1.02f;
         }
 
-        private static bool SlotOffered(Transform car, GameObject held)
+        private static List<PlayMakerFSM> Hinges(Transform car)
         {
             if (Time.unscaledTime >= nextHingeRefresh) { hinges.Clear(); nextHingeRefresh = Time.unscaledTime + 2f; }
             if (!hinges.TryGetValue(car, out var list))
@@ -135,16 +151,55 @@ namespace PartAdjustment
                 foreach (var fsm in car.GetComponentsInChildren<PlayMakerFSM>(true)) if (fsm.FsmName == "vehPart_Attach") list.Add(fsm);
                 hinges[car] = list;
             }
-            foreach (var fsm in list)
-            {
-                if (fsm == null || !fsm.isActiveAndEnabled || fsm.ActiveStateName != "Over") continue;
-                var item = fsm.FsmVariables.GetFsmGameObject("Item")?.Value;
-                if (item != null && (item == held || item.transform.IsChildOf(held.transform))) return true;
-            }
+            return list;
+        }
+
+        private static bool Offers(PlayMakerFSM fsm, GameObject held)
+        {
+            if (fsm == null || !fsm.isActiveAndEnabled || fsm.ActiveStateName != "Over") return false;
+            var item = fsm.FsmVariables.GetFsmGameObject("Item")?.Value;
+            return item != null && (item == held || item.transform.IsChildOf(held.transform));
+        }
+
+        // Only when the player aims at the slot itself (within SlotRadius of its hinge). A hinge can stay in "Over" after the
+        // light has left its trigger (held items are triggers too), so a slot elsewhere on the car must not block the mount.
+        private const float SlotRadius = 0.35f;
+        private static bool SlotOffered(Transform car, GameObject held, Vector3 point)
+        {
+            foreach (var fsm in Hinges(car))
+                if (Offers(fsm, held) && (fsm.transform.position - point).sqrMagnitude < SlotRadius * SlotRadius) return true;
             return false;
         }
 
-        private static void Attach(PlayMakerFSM grab, PlayMakerFSM adjustTool, GameObject held, Transform parent, Vector3 point, Vector3 normal)
+        // After our mount no hinge may keep offering the light (its next Use would pull it into the slot).
+        private static void ResetOffers(Transform car, GameObject held)
+        {
+            foreach (var fsm in Hinges(car))
+            {
+                if (!Offers(fsm, held)) continue;
+                var item = fsm.FsmVariables.GetFsmGameObject("Item");
+                if (item != null) item.Value = null;
+                fsm.Fsm.SetState("partMissing");
+            }
+        }
+
+        // Lights on <=> the switch's LightOn FSM is enabled (its useDoor turns them off; Apocaplayer reads it the same way).
+        internal static bool LightsOn(Transform car)
+        {
+            foreach (var fsm in car.GetComponentsInChildren<PlayMakerFSM>())
+                if (fsm.FsmName == "LightOn" && fsm.gameObject.name == "switch_lights") return fsm.enabled;
+            return false;
+        }
+
+        // The car's switch reaches the lights in the headlight slots only; mounted lights get the same event from us.
+        internal static void SwitchLights(Transform car, string evt)
+        {
+            if (car == null) return;
+            foreach (var fsm in car.GetComponentsInChildren<PlayMakerFSM>())
+                if (fsm.FsmName == "Headlight" && IsHeadlight(fsm.gameObject)) fsm.SendEvent(evt);
+        }
+
+        private static void Attach(PlayMakerFSM grab, PlayMakerFSM adjustTool, GameObject held, Transform parent, Vector3 point, Vector3 normal, Transform car)
         {
             var t = held.transform;
             // Keep the hand pose when the light already touches the surface; otherwise put it flush on the aimed point.
@@ -162,6 +217,9 @@ namespace PartAdjustment
             held.layer = 8;
             t.SetParent(parent, true);
             t.SetPositionAndRotation(position, rotation);
+            ResetOffers(car, held);
+            var light = AdjustmentRunner.Find(held, "Headlight");
+            if (light != null) light.SendEvent(LightsOn(car) ? "HeadlightsON" : "HeadlightsOFF");
             PlayWrench(adjustTool, position);
             Plugin.Log.LogInfo("Attached " + held.name + " to " + Path(parent));
         }
@@ -222,6 +280,30 @@ namespace PartAdjustment
             var s = t.name;
             for (var p = t.parent; p != null; p = p.parent) s = p.name + "/" + s;
             return s;
+        }
+    }
+}
+
+namespace PartAdjustment
+{
+    // The light switch (switch_lights FSMs LightOn / LightOff) sends HeadlightsON / OFF that only reaches the slot lights;
+    // repeat it for every headlight / tail light anywhere on that car, so freely mounted ones follow the switch.
+    [HarmonyLib.HarmonyPatch(typeof(HutongGames.PlayMaker.Actions.SendEvent), nameof(HutongGames.PlayMaker.Actions.SendEvent.OnEnter))]
+    internal static class LightSwitchPatch
+    {
+        private static void Postfix(HutongGames.PlayMaker.Actions.SendEvent __instance)
+        {
+            var name = __instance.Fsm?.Name;
+            if (name != "LightOn" && name != "LightOff") return;
+            var evt = __instance.sendEvent?.Name;
+            // LightOff's useDoor switches the lights on, LightOn's switches them off.
+            if (evt != "HeadlightsON" && evt != "HeadlightsOFF") evt = name == "LightOff" ? "HeadlightsON" : "HeadlightsOFF";
+            try
+            {
+                var body = __instance.Owner == null ? null : __instance.Owner.GetComponentInParent<UnityEngine.Rigidbody>();
+                if (body != null) HeadlightMount.SwitchLights(body.transform, evt);
+            }
+            catch (System.Exception e) { Plugin.Log.LogError("Headlight switch: " + e); }
         }
     }
 }
