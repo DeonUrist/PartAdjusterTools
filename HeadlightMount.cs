@@ -302,6 +302,7 @@ namespace PartAdjustment
             {
                 var body = __instance.Owner == null ? null : __instance.Owner.GetComponentInParent<UnityEngine.Rigidbody>();
                 if (body != null) HeadlightMount.SwitchLights(body.transform, evt);
+                if (body != null && evt == "HeadlightsON" && TailLights.HasTail(body.transform)) LightProbe.Request(body.transform);
             }
             catch (System.Exception e) { Plugin.Log.LogError("Headlight switch: " + e); }
         }

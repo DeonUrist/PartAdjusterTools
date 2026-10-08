@@ -2,6 +2,8 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
+Version 1.5.8: `[Headlights] TailLightPixel` (on) keeps the tail light's red light per-pixel even with many lights around (forward rendering otherwise lights extra lights per vertex, which looks patchy on the ground); a light report is written to the log when a car with tail lights switches its lights on (investigating darker ground where two tail lights overlap).
+
 Version 1.5.7: the tail light settings are back for tuning - `[Headlights] TailLightBeam` (3, strength vs a headlight beam), `TailLightReach` (4 m), `TailLightShadows` (off), all applied at once. Use (F) during an E adjustment now only removes the light you aim at: putting the tool away at the toolbox no longer drops the light being adjusted; ending an adjustment any way keeps its pose.
 
 Version 1.5.6: the tail light's red light is a short glow on the ground right behind the lamp (4 m, 3x a headlight beam's strength, no shadows, so two crossing tail lights no longer darken the ground); the TailLightBeam / TailLightReach settings are gone (fixed values).

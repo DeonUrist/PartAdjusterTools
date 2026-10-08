@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.5.7")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.5.8")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";
@@ -21,7 +21,7 @@ namespace PartAdjustment
         internal static ConfigEntry<bool> AttachAnywhere, PutAwayWithKey;
         internal static ConfigEntry<int> TailLightChance;
         internal static ConfigEntry<float> TailLightBeam, TailLightReach;
-        internal static ConfigEntry<bool> TailLightShadows;
+        internal static ConfigEntry<bool> TailLightShadows, TailLightPixel;
         internal static ConfigEntry<KeyCode> PutAwayKey;
         private static GameObject runner;
         private void Awake()
@@ -48,6 +48,8 @@ namespace PartAdjustment
             TailLightBeam.SettingChanged += (s, e) => TailLights.BeamChanged();
             TailLightReach.SettingChanged += (s, e) => TailLights.BeamChanged();
             TailLightShadows.SettingChanged += (s, e) => TailLights.BeamChanged();
+            TailLightPixel = Config.Bind("Headlights", "TailLightPixel", true, "Render the tail light's red light per pixel always. Off: Unity may light it per vertex when many lights are near, which looks patchy on the ground.");
+            TailLightPixel.SettingChanged += (s, e) => TailLights.BeamChanged();
             PutAwayWithKey = Config.Bind("Tools", "PutAwayWithKey", true, "Put away the utility, repair or Part Adjustment tool with PutAwayKey instead of walking back to the toolbox.");
             PutAwayKey = Config.Bind("Tools", "PutAwayKey", KeyCode.X, "Key that puts away the tool in your hands.");
             new Harmony(Guid).PatchAll(typeof(Plugin).Assembly);

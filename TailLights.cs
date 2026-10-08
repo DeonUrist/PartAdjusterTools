@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using HutongGames.PlayMaker.Actions;
 using UnityEngine;
@@ -168,6 +169,16 @@ namespace PartAdjustment
         {
             live.RemoveWhere(g => g == null);
             foreach (var go in live) ApplyLights(go);
+            var any = live.FirstOrDefault(g => g.activeInHierarchy);
+            var body = any == null ? null : any.GetComponentInParent<Rigidbody>();
+            if (body != null) LightProbe.Request(body.transform);
+        }
+
+        internal static bool HasTail(Transform car)
+        {
+            foreach (var fsm in car.GetComponentsInChildren<PlayMakerFSM>())
+                if (fsm.FsmName == "Headlight" && IsTail(fsm.gameObject)) return true;
+            return false;
         }
 
         private static void ApplyLights(GameObject go)
@@ -191,6 +202,9 @@ namespace PartAdjustment
                         light.intensity = b.x * Plugin.TailLightBeam.Value;
                         light.range = Mathf.Min(b.y, Plugin.TailLightReach.Value);
                         light.shadows = Plugin.TailLightShadows.Value ? LightShadows.Soft : LightShadows.None;
+                        // Forward rendering lights only the N most important lights per object per pixel (QualitySettings.pixelLightCount);
+                        // the rest fall back to per-vertex / spherical harmonics - on a terrain that is a coarse, wrong-looking patch.
+                        light.renderMode = Plugin.TailLightPixel.Value ? LightRenderMode.ForcePixel : LightRenderMode.Auto;
                     }
                 }
             }
@@ -296,6 +310,7 @@ namespace PartAdjustment
         internal static void SceneLoaded() { due = Time.frameCount + 3; tries = 0; }
         private void Update()
         {
+            LightProbe.Tick();
             if (due < 0 || Time.frameCount < due || Time.unscaledTime < retryAt) return;
             if (TailLights.EnsureTemplates() || ++tries >= 4) { due = -1; return; }
             retryAt = Time.unscaledTime + 5f;   // the prefab may load a little later; a few cheap retries per scene
