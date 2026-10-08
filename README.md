@@ -2,6 +2,8 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
+Version 1.5.2: tail lights switch on visibly - the lit part of the light (beam/glow) keeps its brightness and turns red instead of being darkened, the red light keeps the headlight's strength.
+
 Version 1.5.1: every headlight model (Headlight, Headlight 2, Headlight 3) has its tail light (`tail_light`, `tail_light_2`, `tail_light_3`, "Tail Light", "Tail Light 2", "Tail Light 3" in Apocaspawner and world loot); freely mounted lights follow the car's light switch (and match it when mounted); a headlight slot only takes the press when you aim at the slot itself, and a slot that stayed "ready" after the light left it no longer blocks or later steals a mounted light. A refused mount is logged with the reason.
 
 Version 1.5.0 adds free headlight mounting, red tail lights and a put-away key for tools.

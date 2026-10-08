@@ -26,7 +26,7 @@ namespace PartAdjustment
         private static readonly Dictionary<string, Dictionary<string, Vector2>> baseLight = new Dictionary<string, Dictionary<string, Vector2>>();
         private static readonly HashSet<GameObject> spawned = new HashSet<GameObject>();
         private static MaterialPropertyBlock block;
-        private static readonly int ColorId = Shader.PropertyToID("_Color"), EmissionId = Shader.PropertyToID("_EmissionColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color"), EmissionId = Shader.PropertyToID("_EmissionColor"), TintId = Shader.PropertyToID("_TintColor");
 
         internal static bool IsTail(GameObject go) => go != null && go.name.StartsWith(Key, StringComparison.Ordinal);
 
@@ -70,6 +70,7 @@ namespace PartAdjustment
                 UnityEngine.Object.DontDestroyOnLoad(template);
                 foreach (var r in template.GetComponentsInChildren<Renderer>(true))
                 {
+                    if (InLight(r.transform, template.transform)) continue;
                     var mats = r.sharedMaterials;
                     for (int i = 0; i < mats.Length; i++) mats[i] = Red(mats[i]);
                     r.sharedMaterials = mats;
@@ -125,6 +126,10 @@ namespace PartAdjustment
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 if (!(r is MeshRenderer || r is SkinnedMeshRenderer)) continue;
+                // The lit part (child "Light": light, beam/glow): a renderer driven by a script is left alone - a per-material block
+                // would replace the script's own block (1.5.1: the tail lights never looked switched on).
+                bool lit = InLight(r.transform, go.transform);
+                if (lit && r.GetComponents<MonoBehaviour>().Length > 0) continue;
                 var mats = r.sharedMaterials;
                 bool swapped = false;
                 for (int i = 0; i < mats.Length; i++)
@@ -135,24 +140,88 @@ namespace PartAdjustment
                     var m = mats[i];
                     if (m == null) continue;
                     block.Clear();
-                    if (m.HasProperty(ColorId)) block.SetColor(ColorId, Tinted(m.GetColor(ColorId)));
-                    if (m.HasProperty(EmissionId)) block.SetColor(EmissionId, Tinted(m.GetColor(EmissionId)));
+                    // Body: darkened red tint. A plain glow mesh of the lit part: red at the same brightness.
+                    if (m.HasProperty(ColorId)) block.SetColor(ColorId, lit ? Reddened(m.GetColor(ColorId)) : Tinted(m.GetColor(ColorId)));
+                    if (m.HasProperty(EmissionId)) block.SetColor(EmissionId, lit ? Reddened(m.GetColor(EmissionId)) : Tinted(m.GetColor(EmissionId)));
+                    if (lit && m.HasProperty(TintId)) block.SetColor(TintId, Reddened(m.GetColor(TintId)));
                     r.SetPropertyBlock(block, i);
                 }
             }
             ApplyLights(go);
         }
 
+        // Under the item's light part: a transform named "Light" or carrying a Light, between t and the item root.
+        private static bool InLight(Transform t, Transform root)
+        {
+            for (var p = t; p != null && p != root; p = p.parent)
+                if (p.name == "Light" || p.GetComponent<Light>() != null) return true;
+            return false;
+        }
+
+        private static readonly HashSet<string> described = new HashSet<string>();
+
         private static void ApplyLights(GameObject go)
         {
+            RecolorBeams(go);
+            Describe(go);
             if (!baseLight.ContainsKey(Variant(go.name))) ScanPrefabs();
             baseLight.TryGetValue(Variant(go.name), out var lights);
             foreach (var light in go.GetComponentsInChildren<Light>(true))
             {
                 light.color = LightColor;
                 // Absolute values from the prefab: Easy Save restores the saved light, so never scale the current one.
-                if (lights != null && lights.TryGetValue(light.name, out var b)) { light.intensity = b.x * 0.6f; light.range = b.y * 0.5f; }
+                if (lights != null && lights.TryGetValue(light.name, out var b)) { light.intensity = b.x; light.range = b.y * 0.7f; }
             }
+        }
+
+        // Scripts on the lit part that have their own colour (a beam / glow / flare component): make that colour red too.
+        private static void RecolorBeams(GameObject go)
+        {
+            foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (mb == null || mb is PlayMakerFSM || !InLight(mb.transform, go.transform)) continue;
+                var type = mb.GetType();
+                bool changed = false;
+                foreach (var name in new[] { "color", "Color", "colorFlat", "m_Color" })
+                {
+                    var f = type.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (f != null && f.FieldType == typeof(Color)) { f.SetValue(mb, Reddened((Color)f.GetValue(mb))); changed = true; break; }
+                    var p = type.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (p != null && p.PropertyType == typeof(Color) && p.CanRead && p.CanWrite) { p.SetValue(mb, Reddened((Color)p.GetValue(mb, null)), null); changed = true; break; }
+                }
+                if (!changed) continue;
+                var update = type.GetMethod("UpdateAfterManualPropertyChange", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, Type.EmptyTypes, null);
+                try { update?.Invoke(mb, null); } catch (Exception e) { Plugin.Log.LogWarning("Tail light: " + type.Name + " update failed: " + e.Message); }
+            }
+        }
+
+        // Keep the brightness, make it red (a dark multiply would leave an emissive/additive part looking off).
+        private static Color Reddened(Color c)
+        {
+            float v = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+            return new Color(v * LightColor.r, v * LightColor.g, v * LightColor.b, c.a);
+        }
+
+        // Once per model: what the lit part is made of (for the log, in case a model needs special handling).
+        private static void Describe(GameObject go)
+        {
+            var variant = Variant(go.name);
+            if (!described.Add(variant)) return;
+            var sb = new System.Text.StringBuilder("Tail light" + variant + " lit part:");
+            foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            {
+                if (!InLight(t, go.transform)) continue;
+                sb.Append(" [").Append(t.name).Append(t.gameObject.activeSelf ? "" : " (off)").Append(':');
+                foreach (var c in t.GetComponents<Component>())
+                {
+                    if (c == null || c is Transform) continue;
+                    sb.Append(' ').Append(c.GetType().Name);
+                    if (c is Light l) sb.Append("(").Append(l.type).Append(" i=").Append(l.intensity.ToString("0.##")).Append(" r=").Append(l.range.ToString("0.#")).Append(")");
+                    if (c is Renderer r && r.sharedMaterial != null) sb.Append("(").Append(r.sharedMaterial.shader.name).Append(")");
+                }
+                sb.Append(']');
+            }
+            Plugin.Log.LogInfo(sb.ToString());
         }
 
         // The item's ItemName FSM writes the literal "Headlight" into the look-at label; say "Tail Light" for ours.
