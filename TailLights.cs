@@ -185,7 +185,7 @@ namespace PartAdjustment
                     // because red carries less brightness. Spot = the beam - same strength, shorter throw (a tail light, not a lamp).
                     // The beam is red, which carries about a third of white's brightness: TailLightBeam (default 3) makes up for it.
                     if (light.type == LightType.Point) { light.intensity = b.x * 1.6f; light.range = b.y; }
-                    else { light.intensity = b.x * Plugin.TailLightBeam.Value; light.range = Mathf.Min(b.y, 80f); }
+                    else { light.intensity = b.x * Plugin.TailLightBeam.Value; light.range = Mathf.Min(b.y, Plugin.TailLightReach.Value); }
                 }
             }
         }
