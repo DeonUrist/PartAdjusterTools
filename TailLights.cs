@@ -170,7 +170,13 @@ namespace PartAdjustment
             {
                 light.color = LightColor;
                 // Absolute values from the prefab: Easy Save restores the saved light, so never scale the current one.
-                if (lights != null && lights.TryGetValue(light.name, out var b)) { light.intensity = b.x; light.range = b.y * 0.7f; }
+                if (lights != null && lights.TryGetValue(light.name, out var b))
+                {
+                    // Point = the lens glow (child "Light", range 0.1 m: it only lights the lens itself) - full reach, a bit stronger
+                    // because red carries less brightness. Spot = the beam - same strength, shorter throw (a tail light, not a lamp).
+                    if (light.type == LightType.Point) { light.intensity = b.x * 1.6f; light.range = b.y; }
+                    else { light.intensity = b.x; light.range = b.y * 0.2f; }
+                }
             }
         }
 
