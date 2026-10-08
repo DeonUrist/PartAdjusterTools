@@ -9,6 +9,8 @@ namespace PartAdjustment
     {
         internal static AdjustmentSession Session;
         internal static Transform Hover;
+        // Hover (or the adjusted item) is an attached headlight / tail light that Use removes with the tool.
+        internal static bool HoverRemovable;
         internal static Camera PlayerCamera;
         internal static int ConsumedSecondaryFrame = -1;
         private static Vector3 direction;
@@ -38,7 +40,12 @@ namespace PartAdjustment
                 {
                     if (fsm.FsmName == "Attach") freelyPlaced = true;
                     else if (fsm.FsmName == "de_Attach") detachable = true;
-                    else if (fsm.FsmName == "ID") gauge = fsm.FsmVariables.GetFsmString("ID")?.Value == "gauge";
+                    else if (fsm.FsmName == "ID")
+                    {
+                        var id = fsm.FsmVariables.GetFsmString("ID")?.Value;
+                        // Headlights and tail lights, in a slot or mounted freely, adjust like gauges.
+                        gauge = id == "gauge" || id == "headlight";
+                    }
                 }
                 if (!freelyPlaced && !gauge) continue;
                 return t.parent != null && t.CompareTag("vehPart") && detachable ? t : null;
@@ -70,6 +77,7 @@ namespace PartAdjustment
             direction = Vector3.zero;
             reset = false;
             Hover = null;
+            HoverRemovable = false;
             var globals = FsmVariables.GlobalVariables;
             var cameraObject = globals.GetFsmGameObject("PlayerCamera")?.Value;
             RefreshCamera(cameraObject);
@@ -79,7 +87,13 @@ namespace PartAdjustment
             if (drive != null && drive.isActiveAndEnabled && drive.ActiveStateName != "Idle"
                 && drive.ActiveStateName != "over" && drive.ActiveStateName != "checkHand") { Stop(); return; }
             if (grab != null && grab.isActiveAndEnabled && (grab.ActiveStateName == "ItemInHand"
-                || grab.ActiveStateName == "Rotate" || grab.ActiveStateName == "Forward" || grab.ActiveStateName == "Backward")) { Stop(); return; }
+                || grab.ActiveStateName == "Rotate" || grab.ActiveStateName == "Forward" || grab.ActiveStateName == "Backward"))
+            {
+                Stop();
+                // Holding a headlight / tail light: offer the free mount on the aimed car body.
+                HeadlightMount.Update(grab, adjustTool, PlayerCamera);
+                return;
+            }
             if (adjustTool.ActiveStateName == "adjust") { Stop(); return; }
             if (Session != null && !Session.Valid) Stop();
 
@@ -88,6 +102,18 @@ namespace PartAdjustment
             const int mask = (1 << 0) | (1 << 8) | (1 << 9) | (1 << 16);
             var hit = ActionHelpers.MousePick(2f, mask);
             if (hit.collider != null && hit.distance <= 2f) Hover = FreeAttachment(hit.collider.transform);
+
+            // Use (F) with the tool removes the attached headlight / tail light under the cursor (or being adjusted),
+            // the same de_Attach the utility wrench sends. The vanilla tool keeps the press while it points at a hinge.
+            var removable = Session != null ? Session.Target : Hover;
+            HoverRemovable = Plugin.AttachAnywhere.Value && removable != null && !HeadlightMount.ToolBusy(adjustTool)
+                && removable.CompareTag("vehPart") && HeadlightMount.IsHeadlight(removable.gameObject);
+            if (HoverRemovable && Controls.Pressed(Controls.Use))
+            {
+                Stop();
+                HeadlightMount.Detach(removable.gameObject, adjustTool);
+                return;
+            }
 
             if (Controls.Pressed(Controls.Secondary))
             {
@@ -117,10 +143,10 @@ namespace PartAdjustment
             else Session.Change(direction, step, PoseMath.Reference(Plugin.ReferenceFrame.Value, PlayerCamera.transform.rotation));
         }
 
-        internal static void Stop() { Session = null; Hover = null; direction = Vector3.zero; reset = false; }
+        internal static void Stop() { Session = null; Hover = null; HoverRemovable = false; direction = Vector3.zero; reset = false; }
         internal static void SceneChanged()
         {
-            Stop(); PlayerCamera = null; cameraOwner = null; adjustTool = drive = grab = null;
+            Stop(); HeadlightMount.SceneChanged(); PlayerCamera = null; cameraOwner = null; adjustTool = drive = grab = null;
             nextCameraRefresh = 0f; ConsumedSecondaryFrame = -1;
         }
         private void OnDestroy() { SceneChanged(); }
@@ -131,7 +157,7 @@ namespace PartAdjustment
     public sealed class AdjustmentLateRunner : MonoBehaviour
     {
         private readonly AdjustmentHint hint = new AdjustmentHint();
-        private void LateUpdate() { AdjustmentRunner.Apply(); hint.Refresh(); }
+        private void LateUpdate() { AdjustmentRunner.Apply(); HeadlightMount.LateCheck(); hint.Refresh(); }
         private void OnDestroy() { hint.Dispose(); }
     }
 }

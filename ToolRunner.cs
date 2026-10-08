@@ -115,7 +115,7 @@ namespace PartAdjustment
             var target = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
             bool hovering = target != null && target.Adjustment != null
                 && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag");
-            bool show = toolOn && (hovering || Active != null || AdjustmentRunner.Session != null || AdjustmentRunner.Hover != null) && Time.timeScale > 0f
+            bool show = toolOn && (hovering || Active != null || AdjustmentRunner.Session != null || AdjustmentRunner.Hover != null || HeadlightMount.Ready) && Time.timeScale > 0f
                 && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
             if (mouseIcon == null || !mouseIcon.isActiveAndEnabled) return;
             if (show)

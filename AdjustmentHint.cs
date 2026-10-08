@@ -9,7 +9,8 @@ namespace PartAdjustment
     {
         private Text useText, title, mode, changeMode, buttons, reset;
         private string suffix, baseText, renderedText, toggleKey;
-        private bool stopping, panelDirty = true, rotating;
+        private bool stopping, removing, panelDirty = true, rotating;
+        private string useKey;
         private int referenceFrame;
         private KeyCode modifier, alternative;
         private GameObject panel;
@@ -40,11 +41,12 @@ namespace PartAdjustment
                 {
                     // ItemUse's native one-line rectangle otherwise clips our second line.
                     if (useText.verticalOverflow != VerticalWrapMode.Overflow) useText.verticalOverflow = VerticalWrapMode.Overflow;
-                    string key = Controls.Keys(Controls.Secondary);
-                    if (suffix == null || key != toggleKey || stopping != (session != null))
+                    string key = Controls.Keys(Controls.Secondary), use = Controls.Keys(Controls.Use);
+                    bool removable = AdjustmentRunner.HoverRemovable;
+                    if (suffix == null || key != toggleKey || stopping != (session != null) || removing != removable || (removable && use != useKey))
                     {
-                        RemoveSuffix(); toggleKey = key; stopping = session != null;
-                        suffix = "\n" + (stopping ? "Stop adjusting: " : "Adjust: ") + key;
+                        RemoveSuffix(); toggleKey = key; stopping = session != null; removing = removable; useKey = use;
+                        suffix = "\n" + (stopping ? "Stop adjusting: " : "Adjust: ") + key + (removing ? "\nRemove: " + use : "");
                     }
                     // Native FSMs can rewrite the hint; append once and leave unchanged text alone.
                     if (useText.text != renderedText)

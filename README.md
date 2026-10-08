@@ -2,6 +2,13 @@
 
 Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part Adjustment tool to adjust suspension, freely attached items and mounted gauges. Vanilla engine, exhaust and radiator controls continue through their original FSMs.
 
+Version 1.5.0 adds free headlight mounting, red tail lights and a put-away key for tools.
+
+- **Headlights anywhere (Part Adjustment tool selected).** Hold a headlight or tail light, aim at any part of a car body within reach and press Use (normally F): it is attached there, flush on the aimed surface (or exactly where you hold it if it already touches the body). Use on an attached headlight / tail light removes it again. Without the tool, headlights only fit the car's headlight slots as before, and a free slot that already offers the held light keeps priority. Freely mounted lights are ordinary attached parts: the utility tool (wrench) removes them, they are saved with the car, they move with the body part they sit on and they switch on with the car's lights.
+- **E adjustment for lights.** With the tool selected, secondary Use (normally E) on an attached headlight or tail light - in a slot or mounted freely - starts the same move/rotate session as for plates, crates and gauges.
+- **Tail lights.** A red version of the headlight (red lens and housing tint, red light). Headlights spawned in wrecks, caves and merchant stock are tail lights at `TailLightChance` percent (default 8). Apocaspawner lists them as "Tail Light" under Vehicle Parts without any change to Apocaspawner. A tail light is the game's own headlight item named `tail_light(Clone)N`; the save stores it as a headlight and the mod restores the red look when it loads. Without the mod a tail light simply becomes a normal headlight again.
+- **Put away tools with X.** `PutAwayKey` (default X) puts away the utility tool, the repair tool or the Part Adjustment tool through the game's own put-away step, as if you used the toolbox again. `PutAwayWithKey` switches it off.
+
 Version 1.4.0 withdraws the 1.3.0 parking hold (it left some cars unable to move) and the 1.2.0 driver/wheel-collider rule: the mod no longer touches a car's physics or wheels. The one stability rule left is the centre of mass (`LiftCenterOfMass`, on/off): a car with a suspension lift kit carries it 0.3 m lower, plus 1.5 x any extra lift of the body, so a tall car on big wheels does not flip in turns. Apocapatrol 2.5.0 applies the same rule to its raider cars.
 
 Version 1.2.1 lowers a lifted car's centre of mass by the lift (`LiftCenterOfMass`, on/off), so a tall car on big wheels does not flip in turns; the Rigidbody's automatic centre is re-read as parts change. Apocapatrol applies the same rule to its template cars without this mod.
@@ -71,6 +78,8 @@ Download `PartAdjusterTools-1.1.0.zip` from [Releases](https://github.com/DeonUr
 Restart the game after installing. BepInEx creates `BepInEx/config/com.denis.apocalypter.partadjustment.cfg` on first load. Apocasetter discovers the plugin through its normal `Apocasetter = true` opt-in; no other mod is required.
 
 Keep `icon.png` beside `PartAdjustment.dll` in the mod's own folder; Apocasetter automatically discovers it there, with no extra registration. For a DLL installed directly in `BepInEx/plugins`, rename the PNG to `PartAdjustment.png` beside that DLL. The icon is copied to `bin/Release` when building. Restart after adding it because Apocasetter caches icons for the session.
+
+Settings added in 1.5.0: `[Headlights] AttachAnywhere` (true), `[Headlights] TailLightChance` (8, 0-100), `[Tools] PutAwayWithKey` (true), `[Tools] PutAwayKey` (X). `AttachAnywhere` also needs `Enabled`.
 
 Defaults: width step 0.025, height step 0.025 metres and height limit ±0.5 metres. Settings can be changed through Apocasetter or the config file. Turning Enabled off stops selection/input and preserves existing vehicle adjustments. Input is ignored while paused, unfocused or with the cursor unlocked.
 

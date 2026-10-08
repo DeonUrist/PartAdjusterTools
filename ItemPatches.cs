@@ -23,6 +23,18 @@ namespace PartAdjustment
         }
     }
 
+    // The frame our Use press mounted or removed a headlight, the game's FSMs must not also act on it.
+    [HarmonyPatch(typeof(GetButtonDown), nameof(GetButtonDown.OnUpdate))]
+    internal static class UseConsumedPatch
+    {
+        private static bool Prefix(GetButtonDown __instance)
+        {
+            if (HeadlightMount.ConsumedUseFrame != Time.frameCount || __instance.buttonName?.Value != Controls.Use) return true;
+            if (__instance.storeResult != null) __instance.storeResult.Value = false;
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(Rotate), "DoRotate")]
     internal static class HeldRotationPatch
     {

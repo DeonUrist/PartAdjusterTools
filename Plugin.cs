@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.4.0")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.5.0")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";
@@ -18,6 +18,9 @@ namespace PartAdjustment
         internal static ConfigEntry<int> ReferenceFrame;
         internal static ConfigEntry<float> MovementStep, RotationAngle, FastMovementStep, FastRotationAngle;
         internal static ConfigEntry<KeyCode> ModifierKey, ModifierAlternative;
+        internal static ConfigEntry<bool> AttachAnywhere, PutAwayWithKey;
+        internal static ConfigEntry<int> TailLightChance;
+        internal static ConfigEntry<KeyCode> PutAwayKey;
         private static GameObject runner;
         private void Awake()
         {
@@ -35,8 +38,12 @@ namespace PartAdjustment
             FastRotationAngle = ItemStep("FastRotationAngle", 10f, 0.1f, 180f, "Degrees per item rotation key press with the modifier held.");
             ModifierKey = Config.Bind("Items", "ModifierKey", KeyCode.LeftAlt, "Hold for faster item movement/rotation. None disables this binding.");
             ModifierAlternative = Config.Bind("Items", "ModifierAlternative", KeyCode.None, "Optional alternative fast-step modifier. Item toggle and Adjust controls use the game's primary/alternate bindings.");
+            AttachAnywhere = Config.Bind("Headlights", "AttachAnywhere", true, "With the Part Adjustment tool selected, a held headlight or tail light attaches anywhere on a car body (Use, normally F) and Use removes attached ones. Without the tool they only fit headlight slots; the utility tool removes them as usual.");
+            TailLightChance = Config.Bind("Headlights", "TailLightChance", 8, new ConfigDescription("Chance in percent that a headlight spawned in the world (wrecks, caves, merchants) is a red tail light instead.", new AcceptableValueRange<int>(0, 100)));
+            PutAwayWithKey = Config.Bind("Tools", "PutAwayWithKey", true, "Put away the utility, repair or Part Adjustment tool with PutAwayKey instead of walking back to the toolbox.");
+            PutAwayKey = Config.Bind("Tools", "PutAwayKey", KeyCode.X, "Key that puts away the tool in your hands.");
             new Harmony(Guid).PatchAll(typeof(Plugin).Assembly);
-            SceneManager.sceneLoaded += (scene, mode) => { EnsureRunner(); ToolRunner.SceneChanged(); AdjustmentRunner.SceneChanged(); };
+            SceneManager.sceneLoaded += (scene, mode) => { EnsureRunner(); ToolRunner.SceneChanged(); AdjustmentRunner.SceneChanged(); TailLights.SceneChanged(); };
             EnsureRunner();
             Logger.LogInfo("Part Adjustment loaded.");
         }
@@ -49,6 +56,8 @@ namespace PartAdjustment
             runner.AddComponent<ToolRunner>();
             runner.AddComponent<AdjustmentRunner>();
             runner.AddComponent<AdjustmentLateRunner>();
+            runner.AddComponent<ToolPutAway>();
+            runner.AddComponent<TailLightRunner>();
         }
 
         private ConfigEntry<float> ItemStep(string name, float value, float min, float max, string description) =>
