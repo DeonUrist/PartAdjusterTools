@@ -5,14 +5,14 @@ using UnityEngine.UI;
 
 namespace PartAdjustment
 {
-    // In-game guide (1.6.1): while the Part Adjustment tool is in hand, a light-red text block at the top left of the screen says what the
+    // In-game guide (1.6.1): while the Part Adjustment tool is in hand, a light-green text block at the top left of the screen says what the
     // tool can do right now - holding a light, aiming at a wrench / attached part, adjusting - with the player's current key bindings.
     // [General] ShowGuide switches it off. Built from the native AdjustUI text (font, size, outline) as a sibling under the same canvas.
     [ES3NonSerializable]
     [DefaultExecutionOrder(10002)]
     public sealed class ToolGuide : MonoBehaviour
     {
-        private static readonly Color TextColor = new Color(1f, 0.6f, 0.6f, 1f);
+        private static readonly Color TextColor = new Color(0.6f, 1f, 0.6f, 1f);
         private Text label;
         private float nextFind;
         private string lastText;
