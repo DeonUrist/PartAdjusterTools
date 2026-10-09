@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace PartAdjustment
 {
-    [BepInPlugin(Guid, "Part Adjustment", "1.6.0")]
+    [BepInPlugin(Guid, "Part Adjustment", "1.6.1")]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "com.denis.apocalypter.partadjustment";

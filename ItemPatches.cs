@@ -29,7 +29,10 @@ namespace PartAdjustment
     {
         private static bool Prefix(GetButtonDown __instance)
         {
-            if (HeadlightMount.ConsumedUseFrame != Time.frameCount || __instance.buttonName?.Value != Controls.Use) return true;
+            if (__instance.buttonName?.Value != Controls.Use) return true;
+            // Holding a headlight / tail light: the tool never starts a hinge adjustment (UseAdjustTool "over" -> "adjust").
+            bool hingeStart = HeadlightMount.HingePressClaimed && __instance.Fsm?.Name == "UseAdjustTool" && __instance.State?.Name == "over";
+            if (HeadlightMount.ConsumedUseFrame != Time.frameCount && !hingeStart) return true;
             if (__instance.storeResult != null) __instance.storeResult.Value = false;
             return false;
         }

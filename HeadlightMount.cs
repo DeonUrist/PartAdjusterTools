@@ -45,12 +45,29 @@ namespace PartAdjustment
 
         internal static string Label(GameObject go) => TailLights.IsTail(go) ? "Tail Light" : "Headlight";
 
-        // The vanilla tool owns the frame while it points at a hinge wrench or adjusts one.
-        internal static bool ToolBusy(PlayMakerFSM adjustTool)
+        // A headlight / tail light in hand (tool selected): nothing else is adjustable. The vanilla hinge pick looks THROUGH the car
+        // body (its MousePick ignores layer 8), so engine/exhaust/suspension wrenches behind a panel used to take the press.
+        private static int holdingFrame = -1, claimFrame = -1;
+        internal static bool HoldingLight => holdingFrame == Time.frameCount;
+        // This frame the Use press belongs to a light (held, or aimed at for removal): the tool must not start a hinge adjustment.
+        internal static bool HingePressClaimed => holdingFrame == Time.frameCount || claimFrame == Time.frameCount;
+        internal static void ClaimHingePress() { claimFrame = Time.frameCount; }
+
+        // A hinge wrench (layer 13, trigger) on the aim ray closer than the given distance.
+        internal static bool HingeInFront(float distance)
+        {
+            var camera = AdjustmentRunner.PlayerCamera;
+            if (camera == null) return false;
+            var ray = camera.ScreenPointToRay(Input.mousePosition);
+            return Physics.Raycast(ray, out var h, Mathf.Min(distance, Reach), 1 << 13, QueryTriggerInteraction.Collide) && h.distance < distance;
+        }
+
+        // Only a hinge adjustment already running blocks a light action.
+        internal static bool Adjusting(PlayMakerFSM adjustTool)
         {
             if (adjustTool == null) return true;
             var s = adjustTool.ActiveStateName;
-            return s == "over" || s == "compare Tag" || s == "adjust" || s == "finish";
+            return s == "adjust" || s == "finish";
         }
 
         internal static void Update(PlayMakerFSM grab, PlayMakerFSM adjustTool, Camera camera)
@@ -60,8 +77,9 @@ namespace PartAdjustment
             if (!Plugin.AttachAnywhere.Value || grab == null || camera == null || grab.ActiveStateName != "ItemInHand") { ReleaseText(); return; }
             var held = ItemRoot(grab.FsmVariables.GetFsmGameObject("Item")?.Value);
             if (held == null || !IsHeadlight(held) || held.CompareTag("vehPart")) { ReleaseText(); return; }
+            holdingFrame = Time.frameCount;
             bool press = Controls.Pressed(Controls.Use);
-            if (ToolBusy(adjustTool)) { ReleaseText(); return; }
+            if (Adjusting(adjustTool)) { ReleaseText(); return; }
             if (!Find(camera, held, out var parent, out var point, out var normal, out var car)) { ReleaseText(); return; }
             // Aiming at a free headlight slot that already offers this item: the vanilla slot attach takes the press.
             if (SlotOffered(car, held, point)) { ReleaseText(); return; }

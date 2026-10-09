@@ -87,7 +87,7 @@ namespace PartAdjustment
             }
             if (Tool.ActiveStateName != "adjust") Active = null;
             var picked = toolOn ? Tool.FsmVariables.GetFsmGameObject("Hinge")?.Value : null;
-            var hover = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
+            var hover = picked == null || HeadlightMount.HoldingLight ? null : picked.GetComponent<SuspensionPickTarget>();
             bool suspension = Active != null || (hover != null && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag"));
             var shown = Active ?? (hover != null ? hover.Adjustment : null);
             hint.Override = shown != null && !shown.KitFitted ? "Fit a suspension lift kit to adjust the suspension" : null;
@@ -113,7 +113,8 @@ namespace PartAdjustment
             }
             var picked = toolOn ? Tool.FsmVariables.GetFsmGameObject("Hinge")?.Value : null;
             var target = picked == null ? null : picked.GetComponent<SuspensionPickTarget>();
-            bool hovering = target != null && target.Adjustment != null
+            bool holdingLight = HeadlightMount.HoldingLight;
+            bool hovering = !holdingLight && target != null && target.Adjustment != null
                 && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "compare Tag");
             bool show = toolOn && (hovering || Active != null || AdjustmentRunner.Session != null || AdjustmentRunner.Hover != null || HeadlightMount.Ready) && Time.timeScale > 0f
                 && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
@@ -130,8 +131,10 @@ namespace PartAdjustment
                 suspensionCursor = false;
                 // Leave the native icon in charge when moving straight to another adjustable part.
                 bool vanillaAdjust = toolOn && (Tool.ActiveStateName == "over" || Tool.ActiveStateName == "adjust");
-                if (!vanillaAdjust && mouseIcon.ActiveStateName == "Adjust") mouseIcon.SendEvent("Cursor_Point");
+                if ((holdingLight || !vanillaAdjust) && mouseIcon.ActiveStateName == "Adjust") mouseIcon.SendEvent("Cursor_Point");
             }
+            // With a light in hand a hinge behind the aimed spot must not show the vanilla adjust icon either.
+            else if (holdingLight && mouseIcon.ActiveStateName == "Adjust") mouseIcon.SendEvent("Cursor_Point");
         }
 
         private void OnDestroy()

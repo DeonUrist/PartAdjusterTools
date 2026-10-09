@@ -105,10 +105,13 @@ namespace PartAdjustment
 
             // Use (F) with the tool removes the attached headlight / tail light under the cursor, the same de_Attach the utility
             // wrench sends. Only the aimed one: F on the toolbox (putting the tool away) during an E session must not pull the
-            // adjusted light off (1.5.6 did). The vanilla tool keeps the press while it points at a hinge.
+            // adjusted light off (1.5.6 did). A hinge wrench only keeps the press when it is really in front of the light: the vanilla
+            // hinge pick looks through the car body, so a wrench behind the panel must not win (1.6.1).
             var removable = Hover;
-            HoverRemovable = Plugin.AttachAnywhere.Value && removable != null && !HeadlightMount.ToolBusy(adjustTool)
-                && removable.CompareTag("vehPart") && HeadlightMount.IsHeadlight(removable.gameObject);
+            HoverRemovable = Plugin.AttachAnywhere.Value && removable != null && !HeadlightMount.Adjusting(adjustTool)
+                && removable.CompareTag("vehPart") && HeadlightMount.IsHeadlight(removable.gameObject)
+                && !HeadlightMount.HingeInFront(hit.distance);
+            if (HoverRemovable) HeadlightMount.ClaimHingePress();
             if (HoverRemovable && Controls.Pressed(Controls.Use))
             {
                 Stop();
