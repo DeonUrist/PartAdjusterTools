@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace PartAdjustment
 {
-    // In-game guide (1.6.1): while the Part Adjustment tool is in hand, a light-red text block on the left of the screen says what the
+    // In-game guide (1.6.1): while the Part Adjustment tool is in hand, a light-red text block at the top left of the screen says what the
     // tool can do right now - holding a light, aiming at a wrench / attached part, adjusting - with the player's current key bindings.
     // [General] ShowGuide switches it off. Built from the native AdjustUI text (font, size, outline) as a sibling under the same canvas.
     [ES3NonSerializable]
@@ -60,8 +60,8 @@ namespace PartAdjustment
                     ? use + " - attach the light here\nAim at a headlight slot to fit it there instead"
                     : "Aim at a car body to attach the light (" + use + ")\nAim at a headlight slot to fit it there";
             }
-            if (AdjustmentRunner.Session != null)
-                return e + " - finish adjusting this part\n" + Controls.Keys(Controls.Reset) + " - back to where it was";
+            // An E session moves the native "ADJUST CAR PARTS" block to the top left and shows the full controls: no guide then.
+            if (AdjustmentRunner.Session != null) return null;
             if (ToolRunner.SuspensionShown)
                 return ToolRunner.SuspensionNoKit
                     ? "Suspension: fit a suspension lift kit to change width and height"
@@ -83,15 +83,17 @@ namespace PartAdjustment
             nextFind = Time.unscaledTime + 1f;
             var native = Resources.FindObjectsOfTypeAll<Transform>().FirstOrDefault(t => t.name == "AdjustUI" && t.gameObject.scene.IsValid());
             var template = native == null ? null : native.GetComponent<Text>();
-            if (template == null || native.parent == null) return false;
+            var canvas = native == null ? null : native.GetComponentInParent<Canvas>(true);
+            if (template == null || canvas == null) return false;
+            // On the root canvas: anchored to the screen and visible whether or not the tool's own panel is active.
             var go = new GameObject("PartAdjustment.Guide", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            go.transform.SetParent(native.parent, false);
+            go.transform.SetParent(canvas.rootCanvas.transform, false);
             label = go.GetComponent<Text>();
             label.font = template.font;
             label.fontSize = Mathf.Max(12, Mathf.RoundToInt(template.fontSize * 0.8f));
             label.fontStyle = template.fontStyle;
             label.color = TextColor;
-            label.alignment = TextAnchor.MiddleLeft;
+            label.alignment = TextAnchor.UpperLeft;
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.verticalOverflow = VerticalWrapMode.Overflow;
             label.raycastTarget = false;
@@ -100,9 +102,10 @@ namespace PartAdjustment
             copy.effectColor = outline != null ? outline.effectColor : new Color(0f, 0f, 0f, 0.8f);
             copy.effectDistance = outline != null ? outline.effectDistance : new Vector2(1f, -1f);
             var rect = label.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
-            rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(24f, 0f);
+            // Top left, two text lines below the top of the screen.
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(24f, -2f * label.fontSize * 1.2f);
             rect.sizeDelta = new Vector2(900f, 200f);
             lastText = null;
             return true;

@@ -4,7 +4,7 @@ Standalone BepInEx 5 / Harmony plugin for Apocalypter. Extends the existing Part
 
 Version 1.6.1: while you hold a headlight or tail light with the Part Adjustment tool, nothing else can be adjusted - engine, exhaust, radiator and suspension wrenches behind the car body no longer take the Use press (or show the adjust icon), so a light can be attached anywhere on the body. Removing an attached light with Use works the same way: a wrench behind the panel no longer takes the press, only one actually in front of the light. A hinge adjustment you started before picking up the light still finishes as usual.
 
-Version 1.6.1 also adds an in-game guide: while the Part Adjustment tool is in hand, light-red text on the left of the screen says what you can do right now (adjust a wrench part, move/rotate an attached part with E, attach or remove a light with F, put the tool away) with your current key bindings; holding a headlight or tail light without the tool shows a hint to take it. `[General] ShowGuide` (on) turns all tutorial texts off.
+Version 1.6.1 also adds an in-game guide: while the Part Adjustment tool is in hand, light-red text at the top left of the screen says what you can do right now (adjust a wrench part, move/rotate an attached part with E, attach or remove a light with F, put the tool away) with your current key bindings; holding a headlight or tail light without the tool shows a hint to take it. `[General] ShowGuide` (on) turns all tutorial texts off.
 
 Version 1.6.0 adds free headlight mounting, red tail lights and a put-away key for tools.
 
