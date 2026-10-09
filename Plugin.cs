@@ -18,7 +18,7 @@ namespace PartAdjustment
         internal static ConfigEntry<int> ReferenceFrame;
         internal static ConfigEntry<float> MovementStep, RotationAngle, FastMovementStep, FastRotationAngle;
         internal static ConfigEntry<KeyCode> ModifierKey, ModifierAlternative;
-        internal static ConfigEntry<bool> AttachAnywhere, PutAwayWithKey;
+        internal static ConfigEntry<bool> AttachAnywhere, PutAwayWithKey, ShowGuide;
         internal static ConfigEntry<int> TailLightChance;
         internal static ConfigEntry<KeyCode> PutAwayKey;
         private static GameObject runner;
@@ -26,6 +26,7 @@ namespace PartAdjustment
         {
             Log = Logger;
             Config.Bind("General", "Apocasetter", true, "Show this mod in the Apocasetter Mods menu.");
+            ShowGuide = Config.Bind("General", "ShowGuide", true, "Tutorial texts: a short guide on the left of the screen while the Part Adjustment tool is in hand (what you can adjust right now and with which keys), and a hint to take the tool when you hold a headlight or tail light. Off hides all of them.");
             Enabled = Config.Bind("General", "Enabled", true, "Enable suspension and attached-item adjustment with the Part Adjustment tool. Existing saved poses remain on vehicles.");
             WidthStep = Config.Bind("Adjustment", "WidthStep", 0.025f, new ConfigDescription("Width multiplier changed per press of the game's Adjust left/right controls (range is always 1.0 to 1.5).", new AcceptableValueRange<float>(0.005f, 0.1f)));
             HeightStep = Config.Bind("Adjustment", "HeightStep", 0.025f, new ConfigDescription("Suspension and wheel mount movement in metres per press of the game's Adjust down/up controls.", new AcceptableValueRange<float>(0.005f, 0.1f)));
@@ -58,6 +59,7 @@ namespace PartAdjustment
             runner.AddComponent<AdjustmentLateRunner>();
             runner.AddComponent<ToolPutAway>();
             runner.AddComponent<TailLightRunner>();
+            runner.AddComponent<ToolGuide>();
         }
 
         private ConfigEntry<float> ItemStep(string name, float value, float min, float max, string description) =>

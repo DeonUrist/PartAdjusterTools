@@ -12,6 +12,8 @@ namespace PartAdjustment
     {
         internal static SuspensionAdjustment Active;
         internal static PlayMakerFSM Tool;
+        // For ToolGuide: the suspension hint is up (hovering / adjusting the suspension), and whether the car lacks a lift kit.
+        internal static bool SuspensionShown, SuspensionNoKit;
         private static readonly HashSet<Transform> pendingVehicles = new HashSet<Transform>();
         private static bool sceneScan = true;
         private float nextScan;
@@ -69,6 +71,7 @@ namespace PartAdjustment
 
         private void Update()
         {
+            SuspensionShown = SuspensionNoKit = false;
             Discover();
             bool toolOn = Plugin.Enabled.Value && Tool != null && Tool.isActiveAndEnabled;
             if (visibility.Changed(toolOn, SuspensionAdjustment.Revision))
@@ -92,6 +95,7 @@ namespace PartAdjustment
             var shown = Active ?? (hover != null ? hover.Adjustment : null);
             hint.Override = shown != null && !shown.KitFitted ? "Fit a suspension lift kit to adjust the suspension" : null;
             hint.Show(suspension);
+            SuspensionShown = suspension; SuspensionNoKit = shown != null && !shown.KitFitted;
             if (Active == null || Time.timeScale <= 0f || !Application.isFocused || Cursor.lockState != CursorLockMode.Locked) return;
             if (!Active.KitFitted) return;
             float width = (SuspensionControls.Pressed(SuspensionControls.Right) ? Plugin.WidthStep.Value : 0f)

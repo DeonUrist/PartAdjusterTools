@@ -36,7 +36,7 @@ namespace PartAdjustment
         }
 
         // GrabItem's Item is the picked collider's object; the item is the nearest object carrying an ID FSM.
-        private static GameObject ItemRoot(GameObject go)
+        internal static GameObject ItemRoot(GameObject go)
         {
             for (var t = go == null ? null : go.transform; t != null; t = t.parent)
                 if (AdjustmentRunner.Find(t.gameObject, "ID") != null) return t.gameObject;
